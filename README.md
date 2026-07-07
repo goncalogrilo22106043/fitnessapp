@@ -136,7 +136,15 @@ Recommended first deployment:
 4. Use build command `npm run build:web`.
 5. Use output directory `dist`.
 
-API deployment can be configured as a separate Vercel project with root directory `apps/api`. Add these environment variables in Vercel, never in Git:
+API deployment can be configured as a separate Vercel project from the same repository. Keep Vercel Root Directory empty so it uses the monorepo root, because the API depends on `packages/domain`.
+
+Use build command:
+
+```bash
+npm run vercel:build:api
+```
+
+Add these environment variables in Vercel, never in Git:
 
 ```bash
 DATABASE_URL="Supabase Pooler URL"
@@ -145,7 +153,7 @@ JWT_SECRET="long random secret"
 NODE_ENV=production
 ```
 
-The API includes a serverless entrypoint at `apps/api/api/index.ts`, while local development still uses the Express server in `apps/api/src/server.ts`.
+The API includes a serverless entrypoint at `apps/api/index.ts`, while local development still uses the Express server in `apps/api/src/server.ts`.
 
 ## Technical Decisions
 
