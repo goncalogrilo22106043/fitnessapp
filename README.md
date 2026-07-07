@@ -148,13 +148,13 @@ Railway setup:
 1. Create a Railway project.
 2. Connect the GitHub repository.
 3. Use the repository root as the service root.
-4. Set the build command:
+4. Railway reads `railway.json` from the repository root. If you configure commands manually, use this build command:
 
 ```bash
 npm run railway:build
 ```
 
-5. Set the start command:
+5. If you configure commands manually, use this start command:
 
 ```bash
 npm run railway:start
