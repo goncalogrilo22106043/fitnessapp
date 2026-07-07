@@ -23,7 +23,8 @@
     "build:api": "npm run build --workspace apps/api",
     "build": "npm run build:domain && npm run build:api",
     "railway:build": "npm run build -w @rotina/domain && npm run prisma:generate -w @rotina/api && npm run build -w @rotina/api",
-    "railway:start": "npm run prisma:deploy -w @rotina/api && npm run start -w @rotina/api"
+    "railway:migrate": "npm run prisma:deploy -w @rotina/api",
+    "railway:start": "npm run start -w @rotina/api"
   },
   "engines": {
     "node": ">=20"

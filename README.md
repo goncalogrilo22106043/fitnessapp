@@ -135,6 +135,11 @@ Recommended first deployment:
 3. For the mobile web app, set the Vercel root directory to `apps/mobile`.
 4. Use build command `npm run build:web`.
 5. Use output directory `dist`.
+6. Add the mobile API URL before building:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL="https://your-railway-api.up.railway.app"
+```
 
 Deploy the API on Railway as a traditional Node/Express service.
 
@@ -164,6 +169,8 @@ JWT_SECRET="long random secret"
 NODE_ENV=production
 ```
 
+For Supabase, do not use the same direct `db.<project>.supabase.co:5432` URL for both variables in Railway. Use the Supabase pooler connection string for `DATABASE_URL`. Use the direct connection string for `DIRECT_URL` only if the Railway service can reach it; otherwise use the Supabase session pooler for migrations.
+
 Railway health check path:
 
 ```bash
@@ -180,6 +187,12 @@ Run seed manually only when needed:
 
 ```bash
 npm run db:seed
+```
+
+Run production migrations as a Railway one-off command after the database URL is correct:
+
+```bash
+npm run railway:migrate
 ```
 
 The API is a normal Express server. Production starts the compiled server at `apps/api/dist/apps/api/src/server.js`; it does not use Vercel serverless files.
@@ -256,14 +269,14 @@ DATABASE_URL="Supabase Pooler URL"
 DIRECT_URL="Supabase Direct connection URL"
 ```
 
-If migrations fail through the pooler, check that `DIRECT_URL` is the direct connection string and not the pooler string.
+On Railway, if Prisma shows `P1001` against `db.<project>.supabase.co:5432`, the service cannot reach that direct host. Keep `DATABASE_URL` as the Supabase pooler URL and run `npm run railway:migrate` only after `DIRECT_URL` points to a reachable Supabase direct or session-pooler connection.
 
 Expo cannot reach the API from a physical device:
 
-Set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to your computer LAN address, for example:
+Set `EXPO_PUBLIC_API_BASE_URL` in `apps/mobile/.env` to your computer LAN address, for example:
 
 ```bash
-EXPO_PUBLIC_API_URL="http://192.168.1.20:4000"
+EXPO_PUBLIC_API_BASE_URL="http://192.168.1.20:4000"
 ```
 
 Chart dependency conflict:

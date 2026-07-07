@@ -3,7 +3,7 @@ import { prisma } from "./db/prisma.js";
 import { createApp } from "./http/app.js";
 
 const app = createApp();
-const server = app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, "0.0.0.0", () => {
   console.log(`Rotina API listening on port ${env.PORT}`);
 });
 
