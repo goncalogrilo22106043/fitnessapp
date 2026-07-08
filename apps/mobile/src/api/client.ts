@@ -1,5 +1,10 @@
 const configuredApiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
-const apiBaseUrl = (configuredApiBaseUrl || "http://localhost:4000").replace(/\/$/, "");
+const localApiBaseUrl = process.env.NODE_ENV === "production" ? undefined : "http://localhost:4000";
+const apiBaseUrl = (configuredApiBaseUrl || localApiBaseUrl)?.replace(/\/$/, "");
+
+if (!apiBaseUrl) {
+  throw new Error("EXPO_PUBLIC_API_BASE_URL is required outside local development.");
+}
 
 export interface ApiSession {
   token: string;
