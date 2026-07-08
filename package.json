@@ -8,6 +8,9 @@
     "packages/*"
   ],
   "scripts": {
+    "build:domain": "npm run build --workspace @rotina/domain",
+    "build:api": "npm run build --workspace apps/api",
+    "build": "npm run build:domain && npm run build:api",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
@@ -18,7 +21,10 @@
     "db:seed": "npm run build -w @rotina/domain && npm run prisma:seed -w @rotina/api",
     "db:deploy": "npm run prisma:deploy -w @rotina/api",
     "prisma:generate": "npm run prisma:generate -w @rotina/api",
-    "prisma:migrate": "npm run prisma:migrate -w @rotina/api"
+    "prisma:migrate": "npm run prisma:migrate -w @rotina/api",
+    "railway:build": "npm run build -w @rotina/domain && npm run prisma:generate -w @rotina/api && npm run build -w @rotina/api",
+    "railway:migrate": "npm run prisma:deploy -w @rotina/api",
+    "railway:start": "npm run start -w @rotina/api"
   },
   "engines": {
     "node": ">=20"

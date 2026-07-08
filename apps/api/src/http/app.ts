@@ -13,6 +13,10 @@ export function createApp() {
   app.use(cors());
   app.use(express.json({ limit: "1mb" }));
 
+  app.get("/", (_request, response) => {
+    response.json({ status: "ok", product: "rotina", health: "/health" });
+  });
+
   app.get("/health", (_request, response) => {
     response.json({ status: "ok", product: "rotina" });
   });

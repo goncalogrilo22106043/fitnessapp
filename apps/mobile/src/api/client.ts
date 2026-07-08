@@ -1,4 +1,5 @@
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000";
+const configuredApiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+const apiBaseUrl = (configuredApiBaseUrl || "http://localhost:4000").replace(/\/$/, "");
 
 export interface ApiSession {
   token: string;

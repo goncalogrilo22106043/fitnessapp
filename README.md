@@ -126,17 +126,38 @@ npm run db:deploy
 - Profile screen shows targets, water goal, eating mode, volume/texture preferences, budget and recalculation actions.
 - Charts use `react-native-chart-kit@6.12.0` with `react-native-svg` for Expo/React 18 compatibility.
 
-## GitHub and Vercel
+## GitHub and Railway
 
 Recommended first deployment:
 
 1. Push this repository to GitHub.
-2. In Vercel, import the GitHub repository.
-3. For the mobile web app, set the Vercel root directory to `apps/mobile`.
-4. Use build command `npm run build:web`.
-5. Use output directory `dist`.
+2. Deploy the API on Railway as a traditional Node/Express service.
+3. Use Expo Go locally for mobile testing.
 
-API deployment can be configured as a separate Vercel project with root directory `apps/api`. Add these environment variables in Vercel, never in Git:
+Railway setup:
+
+1. Create a Railway project.
+2. Connect the GitHub repository.
+3. Use the repository root as the service root. Do not set the root directory to `apps/api`.
+4. Railway reads `nixpacks.toml` and `railway.json` from the repository root. The install command is pinned to:
+
+```bash
+npm install
+```
+
+5. If you configure commands manually, use this build command:
+
+```bash
+npm run railway:build
+```
+
+6. If you configure commands manually, use this start command:
+
+```bash
+npm run railway:start
+```
+
+7. Add these environment variables in Railway, never in Git:
 
 ```bash
 DATABASE_URL="Supabase Pooler URL"
@@ -145,7 +166,33 @@ JWT_SECRET="long random secret"
 NODE_ENV=production
 ```
 
-The API includes a serverless entrypoint at `apps/api/api/index.ts`, while local development still uses the Express server in `apps/api/src/server.ts`.
+For Supabase, do not use the same direct `db.<project>.supabase.co:5432` URL for both variables in Railway. Use the Supabase pooler connection string for `DATABASE_URL`. Use the direct connection string for `DIRECT_URL` only if the Railway service can reach it; otherwise use the Supabase session pooler for migrations.
+
+Railway health check path:
+
+```bash
+/health
+```
+
+Expected health response:
+
+```json
+{ "status": "ok", "product": "rotina" }
+```
+
+Run seed manually only when needed:
+
+```bash
+npm run db:seed
+```
+
+Run production migrations as a Railway one-off command after the database URL is correct:
+
+```bash
+npm run railway:migrate
+```
+
+The API is a normal Express server. Production starts the compiled server at `apps/api/dist/apps/api/src/server.js`; it does not use Vercel serverless files.
 
 ## Technical Decisions
 
@@ -153,6 +200,7 @@ The API includes a serverless entrypoint at `apps/api/api/index.ts`, while local
 - The API persists and validates data, but delegates scoring, nutrition calculations and adaptation decisions to the domain.
 - The mobile app keeps UI state only; meal selection, hard-day adaptation and substitution explanations come from the API/domain.
 - PostgreSQL is provided by `docker-compose.yml` for local development.
+- Railway runs the API as a traditional Node process with `app.listen()` and `process.env.PORT`.
 - Tests use Node's built-in test runner with `tsx` loading TypeScript.
 - Plans store `engineVersion` and `scoringWeightsVersion` so future scoring changes do not invalidate historical plans.
 - Daily versioning uses immutable `DailyPlanVersion` rows plus `DailyPlanAdjustment` audit logs.
@@ -166,7 +214,7 @@ The API includes a serverless entrypoint at `apps/api/api/index.ts`, while local
 - Charts are simple first-pass visualizations, not a full analytics experience yet.
 - Weekly insights are first-pass aggregate rules; they are not yet personalized by training phase.
 - The algorithm is versioned, but there is not yet an experiment assignment system for A/B tests.
-- I could not run Docker/PostgreSQL inside this Codex environment because the `docker` command is unavailable here; schema, migrations, typecheck and tests were validated.
+- In this Codex environment, Prisma engine downloads can fail if DNS to `binaries.prisma.sh` is unavailable. Railway should run `prisma generate` normally during build.
 
 ## API Areas
 
@@ -219,14 +267,14 @@ DATABASE_URL="Supabase Pooler URL"
 DIRECT_URL="Supabase Direct connection URL"
 ```
 
-If migrations fail through the pooler, check that `DIRECT_URL` is the direct connection string and not the pooler string.
+On Railway, if Prisma shows `P1001` against `db.<project>.supabase.co:5432`, the service cannot reach that direct host. Keep `DATABASE_URL` as the Supabase pooler URL and run `npm run railway:migrate` only after `DIRECT_URL` points to a reachable Supabase direct or session-pooler connection.
 
 Expo cannot reach the API from a physical device:
 
-Set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to your computer LAN address, for example:
+Set `EXPO_PUBLIC_API_BASE_URL` in `apps/mobile/.env` to your computer LAN address, for example:
 
 ```bash
-EXPO_PUBLIC_API_URL="http://192.168.1.20:4000"
+EXPO_PUBLIC_API_BASE_URL="http://192.168.1.20:4000"
 ```
 
 Chart dependency conflict:
