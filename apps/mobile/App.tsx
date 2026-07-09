@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { TodayScreen } from "./src/screens/TodayScreen";
-import { colors, spacing } from "./src/ui/theme";
+import { colors, radius, shadows, spacing } from "./src/ui/theme";
 
 const queryClient = new QueryClient();
 
@@ -46,16 +46,20 @@ const styles = StyleSheet.create({
     flex: 1
   },
   tabs: {
+    ...shadows.soft,
     backgroundColor: colors.surface,
-    borderTopColor: colors.line,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    borderWidth: 1,
     borderTopWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
-    padding: spacing.md
+    margin: spacing.md,
+    padding: spacing.sm
   },
   tab: {
     alignItems: "center",
-    borderRadius: 8,
+    borderRadius: radius.md,
     flex: 1,
     minHeight: 44,
     justifyContent: "center"

@@ -22,9 +22,9 @@ export async function scheduleGentleMealReminder(hour: number, minute: number) {
       body: "Tens uma refeicao pronta para adaptar ao teu dia."
     },
     trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
-      minute,
-      repeats: true
+      minute
     }
   });
 }

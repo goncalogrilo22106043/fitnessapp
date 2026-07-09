@@ -1,4 +1,4 @@
-import { apiRequest, setSession } from "../../api/client";
+import { ApiError, apiRequest, setSession } from "../../api/client";
 
 const demoCredentials = {
   email: "demo@rotina.local",
@@ -16,7 +16,11 @@ export async function ensureDemoSession() {
       })
     });
     setSession(session);
-  } catch {
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 401) {
+      throw error;
+    }
+
     const session = await apiRequest<{ token: string }>("/auth/register", {
       method: "POST",
       body: JSON.stringify(demoCredentials)

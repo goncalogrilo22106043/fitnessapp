@@ -38,6 +38,8 @@ export interface MealOption {
   fatEstimate?: number;
   budget: BudgetLevel;
   dna: MealDna;
+  ingredients?: string[];
+  recipeSteps?: string[];
   isSafeMeal?: boolean;
   isFavorite?: boolean;
   pausedUntil?: Date;

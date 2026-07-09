@@ -10,6 +10,8 @@ export function toDomainMeal(meal: PrismaMealOption): MealOption {
     proteinEstimate: meal.proteinEstimate,
     budget: meal.budget as MealOption["budget"],
     dna: meal.dna as unknown as MealOption["dna"],
+    ingredients: meal.ingredients,
+    recipeSteps: meal.recipeSteps,
     isSafeMeal: meal.isSafeMeal,
     isFavorite: meal.isFavorite
   };

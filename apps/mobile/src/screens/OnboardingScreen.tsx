@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ensureDemoSession } from "../features/auth/authApi";
 import { OnboardingInput, saveOnboarding } from "../features/onboarding/onboardingApi";
-import { colors, spacing } from "../ui/theme";
+import { Card, Metric, ProgressBar, PrimaryButton } from "../ui/components";
+import { colors, radius, shadows, spacing, typography } from "../ui/theme";
 
 const initialInput: OnboardingInput = {
   basic: { sex: "male", age: 28, heightCentimeters: 178, weightKilograms: 78 },
@@ -23,20 +24,32 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
   const [input, setInput] = useState(initialInput);
   const [result, setResult] = useState<Awaited<ReturnType<typeof saveOnboarding>>["nutrition"] | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSave() {
     setIsSaving(true);
-    await ensureDemoSession();
-    const response = await saveOnboarding(input);
-    setResult(response.nutrition);
-    setIsSaving(false);
+    setErrorMessage(null);
+
+    try {
+      await ensureDemoSession();
+      const response = await saveOnboarding(input);
+      setResult(response.nutrition);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Não consegui criar o perfil. Tenta novamente.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.brand}>ROTINA</Text>
-        <Text style={styles.title}>Vamos criar uma base alimentar que caiba na tua rotina.</Text>
+        <View style={styles.hero}>
+          <Text style={styles.brand}>ROTINA</Text>
+          <Text style={styles.title}>Vamos criar uma base alimentar que caiba na tua rotina.</Text>
+          <Text style={styles.subtitle}>Responde ao essencial. A app calcula metas e cria os primeiros slots sem tornar isto pesado.</Text>
+          <ProgressBar value={result ? 100 : 72} tone={result ? "sage" : "blue"} />
+        </View>
 
         <Section title="Dados basicos">
           <NumberField
@@ -76,7 +89,7 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
         </Section>
 
         <Section title="Texturas e volume">
-          <Text style={styles.helper}>Preferencia alta para cremoso/suave e volume baixo/medio.</Text>
+          <Text style={styles.helper}>Vamos favorecer refeicoes cremosas, suaves e com volume baixo quando o apetite estiver curto.</Text>
           <OptionRow
             options={[
               ["clean_bulking", "Bulking Limpo"],
@@ -89,18 +102,26 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
 
         {result ? (
           <View style={styles.resultPanel}>
-            <Text style={styles.sectionTitle}>Calculo transparente</Text>
-            <Text style={styles.metricText}>BMR: {result.bmr} kcal</Text>
-            <Text style={styles.metricText}>TDEE: {result.tdee} kcal</Text>
-            <Text style={styles.metricText}>
-              Meta: {result.targets.calories} kcal, {result.targets.proteinGrams}g proteina
-            </Text>
+            <Text style={styles.sectionTitle}>As tuas primeiras metas</Text>
+            <View style={styles.resultGrid}>
+              <Metric label="BMR" value={`${result.bmr}`} />
+              <Metric label="TDEE" value={`${result.tdee}`} tone="blue" />
+              <Metric label="Kcal" value={`${result.targets.calories}`} tone="gold" />
+              <Metric label="Proteina" value={`${result.targets.proteinGrams}g`} tone="sage" />
+            </View>
+            <Text style={styles.helper}>Tudo isto pode ser recalculado no perfil quando o peso ou rotina mudarem.</Text>
           </View>
         ) : null}
 
-        <Pressable style={styles.primaryButton} onPress={result ? onDone : handleSave} disabled={isSaving}>
-          <Text style={styles.primaryButtonText}>{result ? "Entrar no dia" : isSaving ? "A criar..." : "Criar perfil"}</Text>
-        </Pressable>
+        {errorMessage ? (
+          <View style={styles.errorPanel}>
+            <Text style={styles.errorTitle}>Não consegui criar o perfil</Text>
+            <Text style={styles.errorBody}>{errorMessage}</Text>
+            <Text style={styles.errorHint}>Confirma se a API está ativa no Railway e se a app tem o URL certo no ficheiro .env.</Text>
+          </View>
+        ) : null}
+
+        <PrimaryButton label={result ? "Entrar no dia" : isSaving ? "A criar..." : "Criar perfil"} onPress={result ? onDone : handleSave} disabled={isSaving} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -108,10 +129,10 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View style={styles.section}>
+    <Card>
       <Text style={styles.sectionTitle}>{title}</Text>
       {children}
-    </View>
+    </Card>
   );
 }
 
@@ -156,21 +177,34 @@ function OptionRow({
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   container: { padding: spacing.lg, gap: spacing.lg },
+  hero: {
+    gap: spacing.md,
+    paddingTop: spacing.sm
+  },
   brand: { color: colors.sage, fontSize: 14, fontWeight: "800", letterSpacing: 0 },
-  title: { color: colors.ink, fontSize: 28, fontWeight: "800", lineHeight: 34, letterSpacing: 0 },
-  section: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: 8, borderWidth: 1, gap: spacing.md, padding: spacing.md },
+  title: { ...typography.title, color: colors.ink },
+  subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22 },
   sectionTitle: { color: colors.ink, fontSize: 18, fontWeight: "800" },
   helper: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   field: { gap: spacing.xs },
   fieldLabel: { color: colors.muted, fontSize: 13, fontWeight: "700" },
-  input: { borderColor: colors.line, borderRadius: 8, borderWidth: 1, color: colors.ink, fontSize: 16, minHeight: 46, paddingHorizontal: spacing.md },
+  input: { backgroundColor: colors.backgroundSoft, borderColor: colors.line, borderRadius: radius.lg, borderWidth: 1, color: colors.ink, fontSize: 16, minHeight: 50, paddingHorizontal: spacing.md },
   optionRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  option: { borderColor: colors.line, borderRadius: 8, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  option: { backgroundColor: colors.backgroundSoft, borderColor: colors.line, borderRadius: radius.lg, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   optionSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
   optionText: { color: colors.ink, fontWeight: "800" },
   optionTextSelected: { color: colors.surface },
-  resultPanel: { backgroundColor: colors.oat, borderRadius: 8, gap: spacing.xs, padding: spacing.md },
-  metricText: { color: colors.ink, fontSize: 15, fontWeight: "700" },
-  primaryButton: { alignItems: "center", backgroundColor: colors.ink, borderRadius: 8, minHeight: 54, justifyContent: "center" },
-  primaryButtonText: { color: colors.surface, fontSize: 16, fontWeight: "800" }
+  resultPanel: { ...shadows.card, backgroundColor: colors.surfaceWarm, borderColor: colors.line, borderRadius: radius.lg, borderWidth: 1, gap: spacing.md, padding: spacing.lg },
+  resultGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  errorPanel: {
+    backgroundColor: colors.coralSoft,
+    borderColor: "#E9C7BE",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  errorTitle: { color: colors.danger, fontSize: 15, fontWeight: "800" },
+  errorBody: { color: colors.ink, fontSize: 14, lineHeight: 20 },
+  errorHint: { color: colors.muted, fontSize: 13, lineHeight: 18 }
 });

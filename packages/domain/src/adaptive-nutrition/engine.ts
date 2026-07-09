@@ -89,6 +89,7 @@ export class WeightedAdaptiveNutritionEngine implements AdaptiveNutritionEngine 
   suggestSubstitutions(input: SuggestSubstitutionsInput): PlanMeal {
     const excludedMealIds = new Set(input.excludedMealIds ?? []);
     const ranked = input.mealOptions
+      .map((meal) => applyProfileMealFlags(meal, input.profile))
       .filter((meal) => meal.mealTime === input.mealTime)
       .filter((meal) => !excludedMealIds.has(meal.id))
       .filter((meal) => !isPaused(meal))
@@ -163,6 +164,14 @@ export class WeightedAdaptiveNutritionEngine implements AdaptiveNutritionEngine 
       reasons: buildAlternativeReasons(referenceMeal, option.meal, option.breakdown)
     }));
   }
+}
+
+function applyProfileMealFlags(meal: MealOption, profile: UserNutritionProfile): MealOption {
+  return {
+    ...meal,
+    isFavorite: Boolean(meal.isFavorite || profile.favoriteMealIds?.includes(meal.id)),
+    isSafeMeal: Boolean(meal.isSafeMeal || profile.safeMealIds.includes(meal.id))
+  };
 }
 
 function addDays(isoDate: string, dayOffset: number): string {

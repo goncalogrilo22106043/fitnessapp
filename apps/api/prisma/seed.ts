@@ -12,6 +12,12 @@ const meals = [
     proteinEstimate: 42,
     budget: "medium",
     isSafeMeal: true,
+    ingredients: ["frango desfiado", "arroz branco", "courgette", "cenoura", "iogurte natural", "azeite", "sal suave"],
+    recipeSteps: [
+      "Aquecer o arroz e os legumes ate ficarem macios.",
+      "Juntar o frango desfiado e envolver com iogurte natural.",
+      "Finalizar com um fio de azeite para textura mais cremosa."
+    ],
     dna: {
       texture: "creamy",
       temperature: "hot",
@@ -29,6 +35,12 @@ const meals = [
     proteinEstimate: 31,
     budget: "low",
     isSafeMeal: true,
+    ingredients: ["iogurte grego", "whey baunilha", "aveia fina", "frutos vermelhos", "mel"],
+    recipeSteps: [
+      "Misturar o iogurte com whey ate ficar sem grumos.",
+      "Adicionar aveia fina e frutos vermelhos.",
+      "Deixar 5 minutos no frio se quiseres textura mais macia."
+    ],
     dna: {
       texture: "creamy",
       temperature: "cold",
@@ -45,6 +57,12 @@ const meals = [
     caloriesEstimate: 360,
     proteinEstimate: 28,
     budget: "medium",
+    ingredients: ["wrap de trigo", "peru fatiado", "queijo fresco", "alface macia", "molho de iogurte"],
+    recipeSteps: [
+      "Aquecer ligeiramente o wrap para ficar maleavel.",
+      "Adicionar peru, queijo fresco e molho de iogurte.",
+      "Fechar e tostar pouco tempo para manter textura suave."
+    ],
     dna: {
       texture: "soft",
       temperature: "hot",
@@ -61,6 +79,12 @@ const meals = [
     caloriesEstimate: 520,
     proteinEstimate: 34,
     budget: "low",
+    ingredients: ["sopa cremosa de legumes", "ovos", "tostas finas", "azeite", "sal suave"],
+    recipeSteps: [
+      "Aquecer a sopa ate ficar cremosa.",
+      "Adicionar ovos cozidos em pedaços pequenos.",
+      "Servir com tostas finas ao lado para controlar textura."
+    ],
     dna: {
       texture: "liquid",
       temperature: "hot",

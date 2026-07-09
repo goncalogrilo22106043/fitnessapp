@@ -120,6 +120,8 @@ model MealOption {
   fatEstimate      Int?
   budget           String
   dna              Json
+  ingredients      String[]       @default([])
+  recipeSteps      String[]       @default([])
   isSafeMeal       Boolean        @default(false)
   isFavorite       Boolean        @default(false)
   pausedUntil      DateTime?

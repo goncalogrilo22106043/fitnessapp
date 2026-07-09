@@ -1,7 +1,7 @@
 import { Dimensions, StyleSheet, Text } from "react-native";
 import { BarChart } from "react-native-chart-kit";
 import { Card, SectionTitle } from "../ui/components";
-import { chartConfig, colors } from "../ui/theme";
+import { chartConfig, colors, radius, spacing } from "../ui/theme";
 
 export function WeeklyInsightsCard({
   insights
@@ -16,6 +16,7 @@ export function WeeklyInsightsCard({
   return (
     <Card>
       <SectionTitle>Insights semanais</SectionTitle>
+      <Text style={styles.text}>Sinais simples para a proxima semana, sem transformar comida numa folha de calculo.</Text>
       <BarChart
         data={{
           labels: ["Var.", "Cons.", "Agua"],
@@ -29,7 +30,7 @@ export function WeeklyInsightsCard({
         style={styles.chart}
       />
       {(insights?.suggestions.length ? insights.suggestions : ["Ainda estou a juntar dados para sugerir a proxima semana."]).map((suggestion) => (
-        <Text key={suggestion} style={styles.text}>{suggestion}</Text>
+        <Text key={suggestion} style={styles.suggestion}>{suggestion}</Text>
       ))}
     </Card>
   );
@@ -42,6 +43,17 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
   chart: {
-    borderRadius: 8
+    borderRadius: radius.lg
+  },
+  suggestion: {
+    backgroundColor: colors.backgroundSoft,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+    padding: spacing.md
   }
 });

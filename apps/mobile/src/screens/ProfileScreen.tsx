@@ -3,8 +3,8 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ensureDemoSession } from "../features/auth/authApi";
 import { getProfile, recalculateTargets, updateWaterTarget } from "../features/profile/profileApi";
-import { Card, EmptyState, Metric, PrimaryButton, SectionTitle } from "../ui/components";
-import { colors, spacing, typography } from "../ui/theme";
+import { Badge, Card, EmptyState, LoadingSkeleton, Metric, PrimaryButton, ProgressMetric, SectionTitle } from "../ui/components";
+import { colors, radius, spacing, typography } from "../ui/theme";
 
 export function ProfileScreen() {
   const queryClient = useQueryClient();
@@ -32,7 +32,7 @@ export function ProfileScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <EmptyState title="A carregar perfil..." />
+          <LoadingSkeleton lines={5} />
         </View>
       </SafeAreaView>
     );
@@ -54,32 +54,71 @@ export function ProfileScreen() {
         <View style={styles.header}>
           <Text style={styles.brand}>PERFIL</Text>
           <Text style={styles.title}>{profile.data?.user.name}</Text>
-          <Text style={styles.subtitle}>Metas e preferencias que ajudam a Rotina a adaptar sem pressa.</Text>
+          <Text style={styles.subtitle}>Metas e preferencias que ajudam a Rotina a adaptar sem pressa e sem rigidez.</Text>
         </View>
 
         <Card>
-          <SectionTitle>Metas nutricionais</SectionTitle>
+          <View style={styles.cardHeader}>
+            <SectionTitle>Corpo e objetivo</SectionTitle>
+            <Badge label={profile.data?.profile?.bodyGoal === "lean_gain" ? "ganho limpo" : "objetivo ativo"} tone="sage" />
+          </View>
+          <View style={styles.grid}>
+            <Metric label="Modo" value={profile.data?.profile?.eatingMode === "easy_bulking" ? "Facil" : "Limpo"} tone="sage" />
+            <Metric label="Treino" value={`${profile.data?.routine?.trainingDaysPerWeek ?? 0}x/sem`} tone="blue" />
+            <Metric label="Orcamento" value={profile.data?.budget?.level ?? profile.data?.profile?.budgetPreference ?? "-"} />
+          </View>
+        </Card>
+
+        <Card>
+          <SectionTitle>Nutricao</SectionTitle>
           <View style={styles.grid}>
             <Metric label="BMR" value={`${profile.data?.targets?.bmr ?? 0}`} />
             <Metric label="TDEE" value={`${profile.data?.targets?.tdee ?? 0}`} />
-            <Metric label="Calorias" value={`${profile.data?.targets?.calories ?? 0}`} />
-            <Metric label="Proteina" value={`${profile.data?.targets?.proteinGrams ?? 0}g`} />
-            <Metric label="Agua" value={`${profile.data?.profile?.dailyWaterTargetMl ?? 0}ml`} />
-            <Metric label="Modo" value={profile.data?.profile?.eatingMode === "easy_bulking" ? "Facil" : "Limpo"} />
+            <Metric label="Calorias" value={`${profile.data?.targets?.calories ?? 0}`} tone="gold" />
+            <Metric label="Proteina" value={`${profile.data?.targets?.proteinGrams ?? 0}g`} tone="sage" />
           </View>
-          <PrimaryButton label="Aumentar agua +250ml" onPress={() => waterTarget.mutate()} variant="outline" />
           <PrimaryButton label="Recalcular metas" onPress={() => recalc.mutate()} />
         </Card>
 
         <Card>
-          <SectionTitle>Preferencias</SectionTitle>
-          <Text style={styles.item}>Volume baixo: {Math.round((profile.data?.profile?.preferredVolumes.low ?? 0) * 100)}%</Text>
-          <Text style={styles.item}>Texturas evitadas: {profile.data?.profile?.avoidedIngredients.join(", ") || "nenhuma"}</Text>
-          <Text style={styles.item}>Orcamento: {profile.data?.budget?.level ?? profile.data?.profile?.budgetPreference}</Text>
-          <Text style={styles.item}>Treino: {profile.data?.routine?.trainingDaysPerWeek ?? 0}x por semana</Text>
+          <SectionTitle>Agua</SectionTitle>
+          <ProgressMetric
+            label="Objetivo diario"
+            value={`${profile.data?.profile?.dailyWaterTargetMl ?? 0}ml`}
+            progress={Math.min(((profile.data?.profile?.dailyWaterTargetMl ?? 0) / 3500) * 100, 100)}
+            tone="blue"
+          />
+          <PrimaryButton label="Aumentar agua +250ml" onPress={() => waterTarget.mutate()} variant="outline" />
+        </Card>
+
+        <Card>
+          <SectionTitle>Tolerancia alimentar</SectionTitle>
+          <View style={styles.preferenceList}>
+            <Preference label="Volume baixo" value={`${Math.round((profile.data?.profile?.preferredVolumes.low ?? 0) * 100)}%`} />
+            <Preference label="Volume medio" value={`${Math.round((profile.data?.profile?.preferredVolumes.medium ?? 0) * 100)}%`} />
+            <Preference label="Texturas evitadas" value={profile.data?.profile?.avoidedIngredients.join(", ") || "nenhuma"} />
+          </View>
+        </Card>
+
+        <Card>
+          <SectionTitle>Treino e preferencias</SectionTitle>
+          <View style={styles.preferenceList}>
+            <Preference label="Rotina" value={`${profile.data?.routine?.trainingDaysPerWeek ?? 0} treinos por semana`} />
+            <Preference label="Cozinha" value={`${profile.data?.budget?.maxCookingMinutes ?? 0} min max.`} />
+            <Preference label="Modo" value={profile.data?.profile?.eatingMode === "easy_bulking" ? "Bulking Facil" : "Bulking Limpo"} />
+          </View>
         </Card>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function Preference({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.preference}>
+      <Text style={styles.preferenceLabel}>{label}</Text>
+      <Text style={styles.preferenceValue}>{value}</Text>
+    </View>
   );
 }
 
@@ -114,6 +153,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm
+  },
+  cardHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: spacing.md
+  },
+  preferenceList: {
+    gap: spacing.sm
+  },
+  preference: {
+    backgroundColor: colors.backgroundSoft,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  preferenceLabel: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  preferenceValue: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: "800",
+    lineHeight: 20
   },
   item: {
     color: colors.muted,

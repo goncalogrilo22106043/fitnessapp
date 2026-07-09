@@ -73,6 +73,30 @@ Start API and mobile app:
 npm run dev
 ```
 
+Start only the API:
+
+```bash
+npm run dev:api
+```
+
+Start only the mobile app:
+
+```bash
+npm run dev:mobile
+```
+
+For the mobile app, create `apps/mobile/.env` with the API base URL:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL="http://localhost:4000"
+```
+
+When using the Railway API from Expo Go:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL="https://rotina.up.railway.app"
+```
+
 Demo user:
 
 - Email: `demo@rotina.local`
@@ -99,7 +123,7 @@ Generate Prisma Client manually:
 npm run prisma:generate
 ```
 
-Build Expo web for Vercel:
+Build Expo web if needed later:
 
 ```bash
 npm run build:web -w @rotina/mobile
@@ -122,9 +146,11 @@ npm run db:deploy
 - Hydration logs support water timeline and daily progress.
 - Weight logs support a simple trend view.
 - Meal history and weekly insights expose tolerance, variety, consistency, hydration and weight context.
-- The mobile UI uses reusable cards, buttons, feedback buttons, progress bars and chart cards.
+- Favorite meals and Safe Meals are persisted per user profile and reflected in the daily dashboard.
+- Meal detail exposes ingredients, recipe steps, Meal DNA, score and recent feedback.
+- The mobile UI uses a premium card-based design system with badges, progress bars, skeletons, toasts and clear empty states.
 - Profile screen shows targets, water goal, eating mode, volume/texture preferences, budget and recalculation actions.
-- Charts use `react-native-chart-kit@6.12.0` with `react-native-svg` for Expo/React 18 compatibility.
+- Charts use `react-native-chart-kit@6.12.0` with `react-native-svg` for Expo SDK 54 / React 19 compatibility.
 
 ## GitHub and Railway
 
@@ -194,6 +220,22 @@ npm run railway:migrate
 
 The API is a normal Express server. Production starts the compiled server at `apps/api/dist/apps/api/src/server.js`; it does not use Vercel serverless files.
 
+## Supabase
+
+In Supabase, copy the Shared Pooler URI for `DATABASE_URL`. Use a reachable Direct connection or Session Pooler URI for `DIRECT_URL`.
+
+If your database password has special characters, percent-encode them before pasting the URL into Railway or `apps/api/.env`.
+
+Required API variables:
+
+```bash
+DATABASE_URL=""
+DIRECT_URL=""
+JWT_SECRET=""
+PORT=4000
+NODE_ENV=development
+```
+
 ## Technical Decisions
 
 - The Adaptive Nutrition Engine lives in `packages/domain` and has no dependency on React Native, Express, Prisma or storage.
@@ -226,6 +268,9 @@ The API is a normal Express server. Production starts the compiled server at `ap
 - `POST /plans/daily/rollback`: create a new version from a previous version.
 - `GET /plans/substitutions`: list explained alternatives.
 - `POST /plans/swap`: persist a meal swap as a new daily version.
+- `GET /meals/:mealId`: fetch meal detail, ingredients, recipe, DNA and recent feedback.
+- `PATCH /meals/:mealId/favorite`: mark or unmark a meal as favorite.
+- `PATCH /meals/:mealId/safe`: mark or unmark a meal as Safe Meal.
 - `POST /progress/water` and `GET /progress/water`: water logs and daily hydration summary.
 - `POST /progress/weight` and `GET /progress/weight`: weight logs and trend.
 - `GET /progress/meal-history`: meal feedback history with filters.
@@ -279,4 +324,16 @@ EXPO_PUBLIC_API_BASE_URL="http://192.168.1.20:4000"
 
 Chart dependency conflict:
 
-The project pins `react-native-chart-kit@6.12.0` because newer releases require React 19. Keep this version while the app uses Expo SDK 51 / React 18.
+The project uses Expo SDK 54 with React 19. If Expo reports SDK 51 packages, remove old installs and reinstall:
+
+```bash
+rm -rf node_modules package-lock.json apps/mobile/node_modules
+npm install
+```
+
+Prisma cache permission issue on macOS:
+
+```bash
+sudo chown -R $(id -u):$(id -g) ~/.cache/prisma ~/.npm
+npm run prisma:generate
+```

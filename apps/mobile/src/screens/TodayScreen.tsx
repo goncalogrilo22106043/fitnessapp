@@ -5,7 +5,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { DailyProgressCard } from "../components/DailyProgressCard";
 import { FeedbackPrompt } from "../components/FeedbackPrompt";
 import { HardDayButton } from "../components/HardDayButton";
+import { MealDetailModal } from "../components/MealDetailModal";
 import { MealCard, mealTimeLabel } from "../components/MealCard";
+import { NextMealCard } from "../components/NextMealCard";
+import { TodayHero } from "../components/TodayHero";
 import { WaterTracker } from "../components/WaterTracker";
 import { WeeklyInsightsCard } from "../components/WeeklyInsightsCard";
 import { WeightLogger } from "../components/WeightLogger";
@@ -13,6 +16,7 @@ import { ensureDemoSession } from "../features/auth/authApi";
 import { activateHardDay, getDailyDashboard, getSubstitutions, swapMeal } from "../features/plans/planApi";
 import { MealAlternative, PlanMeal } from "../features/plans/types";
 import { useCreatePlan, useFeedback } from "../features/plans/useTodayPlan";
+import { getProfile } from "../features/profile/profileApi";
 import {
   addWater,
   addWeight,
@@ -22,8 +26,8 @@ import {
   getWeight,
   MealMoodFilter
 } from "../features/progress/progressApi";
-import { Card, EmptyState, PrimaryButton, SectionTitle } from "../ui/components";
-import { colors, spacing, typography } from "../ui/theme";
+import { Card, LoadingSkeleton, PrimaryButton, SectionTitle } from "../ui/components";
+import { colors, radius, spacing } from "../ui/theme";
 
 const sampleMeal: PlanMeal = {
   date: new Date().toISOString().slice(0, 10),
@@ -51,6 +55,8 @@ export function TodayScreen() {
   const today = new Date().toISOString().slice(0, 10);
   const queryClient = useQueryClient();
   const [currentMeal, setCurrentMeal] = useState<PlanMeal>(sampleMeal);
+  const [showMealDetail, setShowMealDetail] = useState(false);
+  const [detailMeal, setDetailMeal] = useState<PlanMeal | null>(null);
   const [alternatives, setAlternatives] = useState<MealAlternative[]>([]);
   const [historyFilter, setHistoryFilter] = useState<MealMoodFilter | undefined>();
   const createPlan = useCreatePlan();
@@ -61,6 +67,14 @@ export function TodayScreen() {
     queryFn: async () => {
       await ensureDemoSession();
       return getDailyDashboard(today);
+    },
+    retry: false
+  });
+  const profile = useQuery({
+    queryKey: ["profile-lite"],
+    queryFn: async () => {
+      await ensureDemoSession();
+      return getProfile();
     },
     retry: false
   });
@@ -158,7 +172,11 @@ export function TodayScreen() {
   });
 
   const dailyMeals = dashboard.data?.meals ?? [];
-  const selectedMeal = dailyMeals.find((meal) => meal.mealTime === currentMeal.mealTime) ?? dailyMeals[0] ?? currentMeal;
+  const currentMealIsPreview = currentMeal.selected.meal.id === "preview";
+  const nextMeal = currentMealIsPreview ? dailyMeals[0] ?? currentMeal : dailyMeals.find((meal) => meal.mealTime === currentMeal.mealTime) ?? dailyMeals[0] ?? currentMeal;
+  const selectedMeal = nextMeal;
+  const remainingMeals = dailyMeals.filter((meal) => meal.selected.meal.id !== nextMeal.selected.meal.id);
+  const hasRealPlan = dailyMeals.length > 0 && selectedMeal.selected.meal.id !== "preview";
 
   const statusText = useMemo(() => {
     if (feedback.isSuccess) return "Obrigado. Vamos adaptar as proximas refeicoes.";
@@ -185,36 +203,94 @@ export function TodayScreen() {
     });
   }
 
+  function openMealDetail(meal: PlanMeal) {
+    setCurrentMeal(meal);
+    setDetailMeal(meal);
+    setShowMealDetail(true);
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.brand}>ROTINA</Text>
-          <Text style={styles.title}>A proxima refeicao deve caber no teu dia.</Text>
-          <Text style={styles.subtitle}>{statusText}</Text>
-        </View>
-
-        {dashboard.isLoading ? <EmptyState title="A preparar o teu dia..." /> : null}
+        {dashboard.isLoading ? <LoadingSkeleton lines={5} /> : null}
         {dashboard.isError ? (
-          <EmptyState title="Ainda nao encontrei um plano diario." actionLabel="Gerar plano" onRetry={handleCreatePlan} />
+          <View style={styles.planEmpty}>
+            <Text style={styles.planEmptyEyebrow}>Primeiro passo</Text>
+            <Text style={styles.planEmptyTitle}>Ainda nao ha plano para hoje.</Text>
+            <Text style={styles.planEmptyBody}>Vou criar as refeicoes do dia com macros, tolerancia, volume e variedade em conta.</Text>
+            <PrimaryButton label={createPlan.isPending ? "A gerar..." : "Gerar plano de hoje"} onPress={handleCreatePlan} disabled={createPlan.isPending} />
+          </View>
         ) : (
-          <DailyProgressCard dashboard={dashboard.data} />
+          <TodayHero
+            name={profile.data?.user.name?.split(" ")[0] ?? "Goncalo"}
+            mode={profile.data?.profile?.eatingMode ?? "easy_bulking"}
+            dashboard={dashboard.data}
+            waterTargetMilliliters={profile.data?.profile?.dailyWaterTargetMl ?? water.data?.targetMilliliters ?? 2500}
+          />
         )}
 
-        <MealCard
-          meal={selectedMeal}
-          alternatives={alternatives}
-          onSwapRequest={(meal) => substitutions.mutate(meal)}
-          onSelectAlternative={(alternative) => swap.mutate(alternative)}
-        />
-        <FeedbackPrompt onFeedback={handleFeedback} />
+        {feedback.isSuccess || hardDay.isSuccess || createPlan.isSuccess ? (
+          <View style={styles.toast}>
+            <Text style={styles.toastTitle}>Atualizado</Text>
+            <Text style={styles.toastText}>{statusText}</Text>
+          </View>
+        ) : null}
+
+        {hasRealPlan ? (
+          <NextMealCard
+            meal={nextMeal}
+            alternatives={alternatives}
+            swapLoading={substitutions.isPending || swap.isPending}
+            onView={() => openMealDetail(nextMeal)}
+            onSwapRequest={(meal) => substitutions.mutate(meal)}
+            onSelectAlternative={(alternative) => swap.mutate(alternative)}
+            onMarkEaten={(meal) =>
+              feedback.mutate({
+                mealId: meal.selected.meal.id,
+                mealTime: meal.mealTime,
+                mood: "loved",
+                eatenPercentage: 100
+              })
+            }
+          />
+        ) : null}
+
+        {hasRealPlan ? <FeedbackPrompt onFeedback={handleFeedback} /> : null}
+
+        <HardDayButton onPress={() => hardDay.mutate()} loading={hardDay.isPending} />
+
+        <WaterTracker water={water.data} onAdd={(amount) => waterMutation.mutate(amount)} compact />
+
+        {hasRealPlan ? (
+          <MealCard
+            meal={selectedMeal}
+            alternatives={[]}
+            onSwapRequest={(meal) => substitutions.mutate(meal)}
+            onSelectAlternative={(alternative) => swap.mutate(alternative)}
+            onMarkEaten={(meal) =>
+              feedback.mutate({
+                mealId: meal.selected.meal.id,
+                mealTime: meal.mealTime,
+                mood: "loved",
+                eatenPercentage: 100
+              })
+            }
+            onOpenDetails={openMealDetail}
+          />
+        ) : null}
 
         <Card>
-          <SectionTitle>Refeicoes de hoje</SectionTitle>
-          {dailyMeals.length === 0 ? (
-            <Text style={styles.muted}>Ainda nao ha refeicoes para hoje.</Text>
+          <View style={styles.sectionHeader}>
+            <SectionTitle>Refeicoes restantes</SectionTitle>
+            <Text style={styles.sectionMeta}>{remainingMeals.length || 0} slots</Text>
+          </View>
+          {remainingMeals.length === 0 ? (
+            <View style={styles.inlineEmpty}>
+              <Text style={styles.dailyMealName}>Nada pendente por agora.</Text>
+              <Text style={styles.muted}>Quando houver mais refeicoes no plano, aparecem aqui por ordem do dia.</Text>
+            </View>
           ) : (
-            dailyMeals.map((meal) => (
+            remainingMeals.map((meal) => (
               <Pressable key={`${meal.date}-${meal.mealTime}`} style={styles.dailyMeal} onPress={() => setCurrentMeal(meal)}>
                 <View style={styles.dailyMealText}>
                   <Text style={styles.dailyMealTitle}>{mealTimeLabel[meal.mealTime]}</Text>
@@ -226,7 +302,8 @@ export function TodayScreen() {
           )}
         </Card>
 
-        <WaterTracker water={water.data} onAdd={(amount) => waterMutation.mutate(amount)} />
+        <DailyProgressCard dashboard={dashboard.data} />
+
         <WeightLogger logs={weight.data?.logs} trend={weight.data?.trend} onAdd={() => weightMutation.mutate()} />
 
         <Card>
@@ -249,8 +326,24 @@ export function TodayScreen() {
         </Card>
 
         <WeeklyInsightsCard insights={insights.data} />
-        <HardDayButton onPress={() => hardDay.mutate()} loading={hardDay.isPending} />
         <PrimaryButton label={createPlan.isPending ? "A adaptar..." : "Gerar plano semanal"} onPress={handleCreatePlan} disabled={createPlan.isPending} />
+        <MealDetailModal
+          meal={detailMeal}
+          visible={showMealDetail}
+          alternatives={alternatives}
+          swapLoading={substitutions.isPending || swap.isPending}
+          onClose={() => setShowMealDetail(false)}
+          onMarkEaten={(meal) =>
+            feedback.mutate({
+              mealId: meal.selected.meal.id,
+              mealTime: meal.mealTime,
+              mood: "loved",
+              eatenPercentage: 100
+            })
+          }
+          onSwapRequest={(meal) => substitutions.mutate(meal)}
+          onSelectAlternative={(alternative) => swap.mutate(alternative)}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -271,30 +364,49 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     padding: spacing.lg
   },
-  header: {
-    gap: spacing.sm
-  },
-  brand: {
-    color: colors.sage,
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 0
-  },
-  title: {
-    ...typography.title,
-    color: colors.ink
-  },
-  subtitle: {
-    color: colors.muted,
-    fontSize: 16,
-    lineHeight: 23
-  },
   dailyMeal: {
-    backgroundColor: colors.oat,
-    borderRadius: 8,
+    backgroundColor: colors.backgroundSoft,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    borderWidth: 1,
     minHeight: 82,
     justifyContent: "center",
     padding: spacing.md
+  },
+  planEmpty: {
+    backgroundColor: colors.surfaceWarm,
+    borderColor: colors.line,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    gap: spacing.md,
+    padding: spacing.lg
+  },
+  planEmptyEyebrow: {
+    color: colors.sage,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  planEmptyTitle: {
+    color: colors.ink,
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: 0,
+    lineHeight: 34
+  },
+  planEmptyBody: {
+    color: colors.muted,
+    fontSize: 15,
+    lineHeight: 22
+  },
+  sectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  sectionMeta: {
+    color: colors.subtle,
+    fontSize: 12,
+    fontWeight: "800"
   },
   dailyMealText: {
     gap: spacing.xs
@@ -313,6 +425,33 @@ const styles = StyleSheet.create({
   muted: {
     color: colors.muted,
     fontSize: 14,
+    lineHeight: 20
+  },
+  inlineEmpty: {
+    backgroundColor: colors.backgroundSoft,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  toast: {
+    backgroundColor: colors.sageSoft,
+    borderColor: "#D5E3D3",
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  toastTitle: {
+    color: colors.sage,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  toastText: {
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "700",
     lineHeight: 20
   },
   filterRow: {

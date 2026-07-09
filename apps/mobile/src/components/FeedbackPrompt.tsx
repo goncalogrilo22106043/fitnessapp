@@ -8,12 +8,13 @@ export function FeedbackPrompt({
   onFeedback: (mood: "loved" | "neutral" | "could_not_finish", eatenPercentage: number) => void;
 }) {
   return (
-    <Card>
+    <Card tone="warm">
       <SectionTitle>Como correu?</SectionTitle>
+      <Text style={styles.copy}>O teu feedback ajusta as proximas escolhas sem mudares nada manualmente.</Text>
       <View style={styles.row}>
-        <FeedbackButton label="Adorei" symbol=":)" onPress={() => onFeedback("loved", 100)} />
-        <FeedbackButton label="Normal" symbol=":|" onPress={() => onFeedback("neutral", 75)} />
-        <FeedbackButton label="Adaptar" symbol=":/" onPress={() => onFeedback("could_not_finish", 35)} />
+        <FeedbackButton label="Adorei" symbol="+" onPress={() => onFeedback("loved", 100)} />
+        <FeedbackButton label="Normal" symbol="=" onPress={() => onFeedback("neutral", 75)} />
+        <FeedbackButton label="Adaptar" symbol="-" onPress={() => onFeedback("could_not_finish", 35)} />
       </View>
     </Card>
   );
@@ -33,11 +34,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm
   },
+  copy: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 20
+  },
   button: {
     alignItems: "center",
     backgroundColor: colors.surface,
     borderColor: colors.line,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     flex: 1,
     justifyContent: "center",
@@ -46,7 +52,7 @@ const styles = StyleSheet.create({
   },
   symbol: {
     color: colors.blue,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800"
   },
   label: {

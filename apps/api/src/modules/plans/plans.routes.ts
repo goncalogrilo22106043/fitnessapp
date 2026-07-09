@@ -258,7 +258,7 @@ plansRouter.post("/daily/rollback", authenticate, async (request, response) => {
 });
 
 async function loadDailyPlan(userId: string, date: string): Promise<DailyPlan> {
-  const [dailyVersion, latestPlan, targets, feedback, waterLogs] = await Promise.all([
+  const [dailyVersion, latestPlan, targets, feedback, waterLogs, profile] = await Promise.all([
     prisma.dailyPlanVersion.findFirst({
       where: { userId, date: dateToUtc(date) },
       orderBy: { version: "desc" }
@@ -280,12 +280,17 @@ async function loadDailyPlan(userId: string, date: string): Promise<DailyPlan> {
         userId,
         occurredAt: dayRange(date)
       }
-    })
+    }),
+    prisma.userProfile.findUnique({ where: { userId } })
   ]);
   const content = latestPlan.content as unknown as WeeklyPlan;
-  const meals = dailyVersion
+  const rawMeals = dailyVersion
     ? (dailyVersion.content as unknown as DailyPlan).meals
     : content.meals.filter((meal): meal is PlanMeal => meal.date === date);
+  const meals = await hydratePlanMeals(rawMeals, {
+    favoriteMealIds: profile?.favoriteMealIds ?? [],
+    safeMealIds: profile?.safeMealIds ?? []
+  });
   const consumedCalories = feedback.reduce((total, item) => {
     return total + Math.round(item.meal.caloriesEstimate * (item.eatenPercentage / 100));
   }, 0);
@@ -311,6 +316,56 @@ async function loadDailyPlan(userId: string, date: string): Promise<DailyPlan> {
       proteinGrams: consumedProtein,
       waterMilliliters: waterLogs.reduce((total, log) => total + log.amountMilliliters, 0)
     }
+  };
+}
+
+async function hydratePlanMeals(
+  meals: PlanMeal[],
+  profile: { favoriteMealIds: string[]; safeMealIds: string[] }
+): Promise<PlanMeal[]> {
+  const mealIds = [...new Set(meals.flatMap((meal) => [meal.selected.meal.id, ...meal.alternatives.map((option) => option.meal.id)]))];
+  const mealOptions = await prisma.mealOption.findMany({ where: { id: { in: mealIds } } });
+  const mealById = new Map(mealOptions.map((meal) => [meal.id, meal]));
+
+  return meals.map((meal) => ({
+    ...meal,
+    selected: hydrateSelectedMeal(meal.selected, mealById, profile),
+    alternatives: meal.alternatives.map((option) => hydrateSelectedMeal(option, mealById, profile))
+  }));
+}
+
+function hydrateSelectedMeal(
+  selected: PlanMeal["selected"],
+  mealById: Map<string, Awaited<ReturnType<typeof prisma.mealOption.findMany>>[number]>,
+  profile: { favoriteMealIds: string[]; safeMealIds: string[] }
+): PlanMeal["selected"] {
+  const meal = mealById.get(selected.meal.id);
+  if (!meal) {
+    return selected;
+  }
+
+  const hydratedMeal: PlanMeal["selected"]["meal"] = {
+    ...selected.meal,
+    caloriesEstimate: meal.caloriesEstimate,
+    proteinEstimate: meal.proteinEstimate,
+    dna: meal.dna as unknown as PlanMeal["selected"]["meal"]["dna"],
+    isFavorite: meal.isFavorite || profile.favoriteMealIds.includes(meal.id),
+    isSafeMeal: meal.isSafeMeal || profile.safeMealIds.includes(meal.id),
+    ingredients: meal.ingredients,
+    recipeSteps: meal.recipeSteps
+  };
+
+  if (meal.carbsEstimate !== null) {
+    hydratedMeal.carbsEstimate = meal.carbsEstimate;
+  }
+
+  if (meal.fatEstimate !== null) {
+    hydratedMeal.fatEstimate = meal.fatEstimate;
+  }
+
+  return {
+    ...selected,
+    meal: hydratedMeal
   };
 }
 
