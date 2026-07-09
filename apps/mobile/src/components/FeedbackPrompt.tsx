@@ -3,14 +3,17 @@ import { Card, SectionTitle } from "../ui/components";
 import { colors, radius, spacing } from "../ui/theme";
 
 export function FeedbackPrompt({
+  mealName,
   onFeedback
 }: {
+  mealName: string;
   onFeedback: (mood: "loved" | "neutral" | "could_not_finish", eatenPercentage: number) => void;
 }) {
   return (
     <Card tone="warm">
       <SectionTitle>Como correu?</SectionTitle>
-      <Text style={styles.copy}>O teu feedback ajusta as proximas escolhas sem mudares nada manualmente.</Text>
+      <Text style={styles.copy}>{mealName}</Text>
+      <Text style={styles.copy}>Isto fica guardado no historico e ajusta as proximas escolhas.</Text>
       <View style={styles.row}>
         <FeedbackButton label="Adorei" symbol="+" onPress={() => onFeedback("loved", 100)} />
         <FeedbackButton label="Normal" symbol="=" onPress={() => onFeedback("neutral", 75)} />

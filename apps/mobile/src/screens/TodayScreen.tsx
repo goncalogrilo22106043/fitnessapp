@@ -2,63 +2,31 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { DailyProgressCard } from "../components/DailyProgressCard";
 import { FeedbackPrompt } from "../components/FeedbackPrompt";
 import { HardDayButton } from "../components/HardDayButton";
 import { MealDetailModal } from "../components/MealDetailModal";
-import { MealCard, mealTimeLabel } from "../components/MealCard";
+import { mealTimeLabel } from "../components/MealCard";
 import { NextMealCard } from "../components/NextMealCard";
 import { TodayHero } from "../components/TodayHero";
 import { WaterTracker } from "../components/WaterTracker";
-import { WeeklyInsightsCard } from "../components/WeeklyInsightsCard";
-import { WeightLogger } from "../components/WeightLogger";
 import { ensureDemoSession } from "../features/auth/authApi";
 import { activateHardDay, getDailyDashboard, getSubstitutions, swapMeal } from "../features/plans/planApi";
 import { MealAlternative, PlanMeal } from "../features/plans/types";
 import { useCreatePlan, useFeedback } from "../features/plans/useTodayPlan";
 import { getProfile } from "../features/profile/profileApi";
-import {
-  addWater,
-  addWeight,
-  getMealHistory,
-  getWater,
-  getWeeklyInsights,
-  getWeight,
-  MealMoodFilter
-} from "../features/progress/progressApi";
+import { addWater, getWater } from "../features/progress/progressApi";
 import { Card, LoadingSkeleton, PrimaryButton, SectionTitle } from "../ui/components";
 import { colors, radius, spacing } from "../ui/theme";
-
-const sampleMeal: PlanMeal = {
-  date: new Date().toISOString().slice(0, 10),
-  mealTime: "lunch",
-  selected: {
-    score: 0.86,
-    meal: {
-      id: "preview",
-      name: "Bowl cremoso de frango, arroz e legumes",
-      caloriesEstimate: 620,
-      proteinEstimate: 42,
-      dna: {
-        volume: "medium",
-        texture: "creamy",
-        cookingTime: "standard",
-        dominantFlavors: ["suave", "salgado"]
-      }
-    },
-    rationale: ["Boa tolerancia prevista para hoje."]
-  },
-  alternatives: []
-};
 
 export function TodayScreen() {
   const today = new Date().toISOString().slice(0, 10);
   const queryClient = useQueryClient();
-  const [currentMeal, setCurrentMeal] = useState<PlanMeal>(sampleMeal);
+  const [selectedMealKey, setSelectedMealKey] = useState<string | null>(null);
   const [showMealDetail, setShowMealDetail] = useState(false);
   const [detailMeal, setDetailMeal] = useState<PlanMeal | null>(null);
+  const [feedbackMeal, setFeedbackMeal] = useState<PlanMeal | null>(null);
   const [alternatives, setAlternatives] = useState<MealAlternative[]>([]);
-  const [historyFilter, setHistoryFilter] = useState<MealMoodFilter | undefined>();
+  const [alternativesMealKey, setAlternativesMealKey] = useState<string | null>(null);
   const createPlan = useCreatePlan();
   const feedback = useFeedback();
 
@@ -86,31 +54,6 @@ export function TodayScreen() {
     },
     retry: false
   });
-  const weight = useQuery({
-    queryKey: ["weight"],
-    queryFn: async () => {
-      await ensureDemoSession();
-      return getWeight();
-    },
-    retry: false
-  });
-  const mealHistory = useQuery({
-    queryKey: ["meal-history", historyFilter],
-    queryFn: async () => {
-      await ensureDemoSession();
-      return getMealHistory(historyFilter);
-    },
-    retry: false
-  });
-  const insights = useQuery({
-    queryKey: ["weekly-insights"],
-    queryFn: async () => {
-      await ensureDemoSession();
-      return getWeeklyInsights();
-    },
-    retry: false
-  });
-
   const hardDay = useMutation({
     mutationFn: async () => {
       await ensureDemoSession();
@@ -133,16 +76,22 @@ export function TodayScreen() {
   });
   const swap = useMutation({
     mutationFn: async (alternative: MealAlternative) => {
+      const sourceMeal = detailMeal ?? selectedMeal;
+      if (!sourceMeal) {
+        throw new Error("Sem refeicao selecionada.");
+      }
       await ensureDemoSession();
       return swapMeal({
-        date: currentMeal.date,
-        mealTime: currentMeal.mealTime,
-        referenceMealId: currentMeal.selected.meal.id,
+        date: sourceMeal.date,
+        mealTime: sourceMeal.mealTime,
+        referenceMealId: sourceMeal.selected.meal.id,
         selectedMealId: alternative.option.meal.id
       });
     },
     onSuccess: async () => {
       setAlternatives([]);
+      setAlternativesMealKey(null);
+      setShowMealDetail(false);
       await queryClient.invalidateQueries({ queryKey: ["daily-dashboard", today] });
     }
   });
@@ -159,130 +108,105 @@ export function TodayScreen() {
       ]);
     }
   });
-  const weightMutation = useMutation({
-    mutationFn: async () => {
-      await ensureDemoSession();
-      const lastWeight = weight.data?.logs.at(-1)?.weightKilograms ?? 64;
-      return addWeight(Math.round((lastWeight + 0.1) * 10) / 10);
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["weight"] });
-      await queryClient.invalidateQueries({ queryKey: ["weekly-insights"] });
-    }
-  });
-
   const dailyMeals = dashboard.data?.meals ?? [];
-  const currentMealIsPreview = currentMeal.selected.meal.id === "preview";
-  const nextMeal = currentMealIsPreview ? dailyMeals[0] ?? currentMeal : dailyMeals.find((meal) => meal.mealTime === currentMeal.mealTime) ?? dailyMeals[0] ?? currentMeal;
-  const selectedMeal = nextMeal;
-  const remainingMeals = dailyMeals.filter((meal) => meal.selected.meal.id !== nextMeal.selected.meal.id);
-  const hasRealPlan = dailyMeals.length > 0 && selectedMeal.selected.meal.id !== "preview";
+  const selectedMeal = dailyMeals.find((meal) => getMealKey(meal) === selectedMealKey) ?? dailyMeals[0] ?? null;
+  const nextMeal = selectedMeal;
+  const remainingMeals = nextMeal ? dailyMeals.filter((meal) => meal.selected.meal.id !== nextMeal.selected.meal.id) : [];
+  const hasRealPlan = dailyMeals.length > 0;
+  const nextMealAlternatives = nextMeal && alternativesMealKey === getMealKey(nextMeal) ? alternatives : [];
+  const detailMealAlternatives = detailMeal && alternativesMealKey === getMealKey(detailMeal) ? alternatives : [];
 
   const statusText = useMemo(() => {
     if (feedback.isSuccess) return "Obrigado. Vamos adaptar as proximas refeicoes.";
+    if (swap.isSuccess) return "Troca feita. Atualizei o plano diario.";
     if (hardDay.isSuccess) return "Hoje ajustei as proximas refeicoes para opcoes mais faceis.";
     if (createPlan.isSuccess) return "Plano atualizado para o teu ritmo de hoje.";
     return "Hoje vamos procurar refeicoes faceis de manter.";
-  }, [createPlan.isSuccess, feedback.isSuccess, hardDay.isSuccess]);
+  }, [createPlan.isSuccess, feedback.isSuccess, hardDay.isSuccess, swap.isSuccess]);
 
   async function handleCreatePlan() {
     await ensureDemoSession();
     const plan = await createPlan.mutateAsync();
     const todayMeal = plan.meals.find((meal) => meal.date === today) ?? plan.meals[0];
-    if (todayMeal) setCurrentMeal(todayMeal);
+    if (todayMeal) setSelectedMealKey(getMealKey(todayMeal));
     await queryClient.invalidateQueries({ queryKey: ["daily-dashboard", today] });
   }
 
   function handleFeedback(mood: "loved" | "neutral" | "could_not_finish", eatenPercentage: number) {
-    if (selectedMeal.selected.meal.id === "preview") return;
+    if (!feedbackMeal) return;
     feedback.mutate({
-      mealId: selectedMeal.selected.meal.id,
-      mealTime: selectedMeal.mealTime,
+      mealId: feedbackMeal.selected.meal.id,
+      mealTime: feedbackMeal.mealTime,
       mood,
       eatenPercentage
+    }, {
+      onSuccess: () => setFeedbackMeal(null)
     });
   }
 
   function openMealDetail(meal: PlanMeal) {
-    setCurrentMeal(meal);
+    setSelectedMealKey(getMealKey(meal));
     setDetailMeal(meal);
     setShowMealDetail(true);
+  }
+
+  function requestSwap(meal: PlanMeal) {
+    setSelectedMealKey(getMealKey(meal));
+    setDetailMeal(meal);
+    setAlternativesMealKey(getMealKey(meal));
+    setAlternatives([]);
+    substitutions.mutate(meal);
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         {dashboard.isLoading ? <LoadingSkeleton lines={5} /> : null}
-        {dashboard.isError ? (
+        {!dashboard.isLoading && !hasRealPlan ? (
           <View style={styles.planEmpty}>
             <Text style={styles.planEmptyEyebrow}>Primeiro passo</Text>
             <Text style={styles.planEmptyTitle}>Ainda nao ha plano para hoje.</Text>
             <Text style={styles.planEmptyBody}>Vou criar as refeicoes do dia com macros, tolerancia, volume e variedade em conta.</Text>
             <PrimaryButton label={createPlan.isPending ? "A gerar..." : "Gerar plano de hoje"} onPress={handleCreatePlan} disabled={createPlan.isPending} />
           </View>
-        ) : (
+        ) : hasRealPlan ? (
           <TodayHero
             name={profile.data?.user.name?.split(" ")[0] ?? "Goncalo"}
             mode={profile.data?.profile?.eatingMode ?? "easy_bulking"}
             dashboard={dashboard.data}
             waterTargetMilliliters={profile.data?.profile?.dailyWaterTargetMl ?? water.data?.targetMilliliters ?? 2500}
           />
-        )}
+        ) : null}
 
-        {feedback.isSuccess || hardDay.isSuccess || createPlan.isSuccess ? (
+        {feedback.isSuccess || hardDay.isSuccess || createPlan.isSuccess || swap.isSuccess ? (
           <View style={styles.toast}>
             <Text style={styles.toastTitle}>Atualizado</Text>
             <Text style={styles.toastText}>{statusText}</Text>
           </View>
         ) : null}
 
-        {hasRealPlan ? (
+        {nextMeal ? (
           <NextMealCard
             meal={nextMeal}
-            alternatives={alternatives}
+            alternatives={nextMealAlternatives}
             swapLoading={substitutions.isPending || swap.isPending}
             onView={() => openMealDetail(nextMeal)}
-            onSwapRequest={(meal) => substitutions.mutate(meal)}
+            onSwapRequest={requestSwap}
             onSelectAlternative={(alternative) => swap.mutate(alternative)}
-            onMarkEaten={(meal) =>
-              feedback.mutate({
-                mealId: meal.selected.meal.id,
-                mealTime: meal.mealTime,
-                mood: "loved",
-                eatenPercentage: 100
-              })
-            }
+            onMarkEaten={setFeedbackMeal}
           />
         ) : null}
 
-        {hasRealPlan ? <FeedbackPrompt onFeedback={handleFeedback} /> : null}
+        {feedbackMeal ? <FeedbackPrompt mealName={feedbackMeal.selected.meal.name} onFeedback={handleFeedback} /> : null}
 
-        <HardDayButton onPress={() => hardDay.mutate()} loading={hardDay.isPending} />
+        {hasRealPlan ? <HardDayButton onPress={() => hardDay.mutate()} loading={hardDay.isPending} /> : null}
 
-        <WaterTracker water={water.data} onAdd={(amount) => waterMutation.mutate(amount)} compact />
+        {hasRealPlan ? <WaterTracker water={water.data} onAdd={(amount) => waterMutation.mutate(amount)} compact /> : null}
 
-        {hasRealPlan ? (
-          <MealCard
-            meal={selectedMeal}
-            alternatives={[]}
-            onSwapRequest={(meal) => substitutions.mutate(meal)}
-            onSelectAlternative={(alternative) => swap.mutate(alternative)}
-            onMarkEaten={(meal) =>
-              feedback.mutate({
-                mealId: meal.selected.meal.id,
-                mealTime: meal.mealTime,
-                mood: "loved",
-                eatenPercentage: 100
-              })
-            }
-            onOpenDetails={openMealDetail}
-          />
-        ) : null}
-
-        <Card>
+        {hasRealPlan ? <Card>
           <View style={styles.sectionHeader}>
             <SectionTitle>Refeicoes restantes</SectionTitle>
-            <Text style={styles.sectionMeta}>{remainingMeals.length || 0} slots</Text>
+            <Text style={styles.sectionMeta}>{remainingMeals.length} slots</Text>
           </View>
           {remainingMeals.length === 0 ? (
             <View style={styles.inlineEmpty}>
@@ -291,7 +215,7 @@ export function TodayScreen() {
             </View>
           ) : (
             remainingMeals.map((meal) => (
-              <Pressable key={`${meal.date}-${meal.mealTime}`} style={styles.dailyMeal} onPress={() => setCurrentMeal(meal)}>
+              <Pressable key={`${meal.date}-${meal.mealTime}`} style={styles.dailyMeal} onPress={() => setSelectedMealKey(getMealKey(meal))}>
                 <View style={styles.dailyMealText}>
                   <Text style={styles.dailyMealTitle}>{mealTimeLabel[meal.mealTime]}</Text>
                   <Text style={styles.dailyMealName}>{meal.selected.meal.name}</Text>
@@ -300,48 +224,18 @@ export function TodayScreen() {
               </Pressable>
             ))
           )}
-        </Card>
-
-        <DailyProgressCard dashboard={dashboard.data} />
-
-        <WeightLogger logs={weight.data?.logs} trend={weight.data?.trend} onAdd={() => weightMutation.mutate()} />
-
-        <Card>
-          <SectionTitle>Historico de refeicoes</SectionTitle>
-          <View style={styles.filterRow}>
-            <PrimaryButton label="Tudo" onPress={() => setHistoryFilter(undefined)} variant="outline" />
-            <PrimaryButton label="Positivo" onPress={() => setHistoryFilter("loved")} variant="outline" />
-            <PrimaryButton label="Adaptar" onPress={() => setHistoryFilter("could_not_finish")} variant="outline" />
-          </View>
-          {mealHistory.data?.meals.length ? (
-            mealHistory.data.meals.slice(0, 5).map((item) => (
-              <View key={item.id} style={styles.historyItem}>
-                <Text style={styles.dailyMealName}>{item.mealName}</Text>
-                <Text style={styles.muted}>{feedbackLabel[item.mood]} - {item.eatenPercentage}% comido</Text>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.muted}>Ainda nao ha refeicoes registadas neste filtro.</Text>
-          )}
-        </Card>
-
-        <WeeklyInsightsCard insights={insights.data} />
-        <PrimaryButton label={createPlan.isPending ? "A adaptar..." : "Gerar plano semanal"} onPress={handleCreatePlan} disabled={createPlan.isPending} />
+        </Card> : null}
         <MealDetailModal
           meal={detailMeal}
           visible={showMealDetail}
-          alternatives={alternatives}
+          alternatives={detailMealAlternatives}
           swapLoading={substitutions.isPending || swap.isPending}
           onClose={() => setShowMealDetail(false)}
-          onMarkEaten={(meal) =>
-            feedback.mutate({
-              mealId: meal.selected.meal.id,
-              mealTime: meal.mealTime,
-              mood: "loved",
-              eatenPercentage: 100
-            })
-          }
-          onSwapRequest={(meal) => substitutions.mutate(meal)}
+          onMarkEaten={(meal) => {
+            setFeedbackMeal(meal);
+            setShowMealDetail(false);
+          }}
+          onSwapRequest={requestSwap}
           onSelectAlternative={(alternative) => swap.mutate(alternative)}
         />
       </ScrollView>
@@ -349,11 +243,9 @@ export function TodayScreen() {
   );
 }
 
-const feedbackLabel = {
-  loved: "Adorei",
-  neutral: "Normal",
-  could_not_finish: "Vamos adaptar"
-};
+function getMealKey(meal: PlanMeal): string {
+  return `${meal.date}-${meal.mealTime}-${meal.selected.meal.id}`;
+}
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -457,11 +349,5 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     gap: spacing.sm
-  },
-  historyItem: {
-    backgroundColor: colors.oat,
-    borderRadius: 8,
-    gap: spacing.xs,
-    padding: spacing.md
   }
 });

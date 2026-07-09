@@ -155,7 +155,11 @@ export class WeightedAdaptiveNutritionEngine implements AdaptiveNutritionEngine 
   }
 
   suggestMealAlternatives(input: SuggestSubstitutionsInput): MealAlternative[] {
-    const planMeal = this.suggestSubstitutions(input);
+    const excludedMealIds = input.referenceMeal
+      ? Array.from(new Set([...(input.excludedMealIds ?? []), input.referenceMeal.id]))
+      : input.excludedMealIds;
+    const substitutionInput = excludedMealIds ? { ...input, excludedMealIds } : input;
+    const planMeal = this.suggestSubstitutions(substitutionInput);
     const referenceMeal = input.referenceMeal ?? planMeal.selected.meal;
 
     return [planMeal.selected, ...planMeal.alternatives].map((option) => ({

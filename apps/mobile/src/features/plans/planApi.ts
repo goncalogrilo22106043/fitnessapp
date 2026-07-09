@@ -8,6 +8,11 @@ export async function createWeeklyPlan(startsOn: string) {
   });
 }
 
+export async function getLatestWeeklyPlan() {
+  const response = await apiRequest<{ id: string; content: WeeklyPlan }>("/plans/latest");
+  return { ...response.content, id: response.id };
+}
+
 export async function sendMealFeedback(input: {
   mealId: string;
   mealTime: string;

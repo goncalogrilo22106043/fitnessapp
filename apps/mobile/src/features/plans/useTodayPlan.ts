@@ -13,7 +13,13 @@ export function useFeedback() {
   return useMutation({
     mutationFn: sendMealFeedback,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["plan"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["daily-dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["meal-history"] }),
+        queryClient.invalidateQueries({ queryKey: ["weekly-insights"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile-lite"] }),
+        queryClient.invalidateQueries({ queryKey: ["meal-detail"] })
+      ]);
     }
   });
 }

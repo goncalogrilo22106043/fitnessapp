@@ -3,16 +3,28 @@ import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { HistoryScreen } from "./src/screens/HistoryScreen";
+import { InsightsScreen } from "./src/screens/InsightsScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { TodayScreen } from "./src/screens/TodayScreen";
+import { WeeklyPlanScreen } from "./src/screens/WeeklyPlanScreen";
 import { colors, radius, shadows, spacing } from "./src/ui/theme";
 
 const queryClient = new QueryClient();
+type MainTab = "today" | "plan" | "history" | "insights" | "profile";
+
+const tabs: Array<{ key: MainTab; label: string }> = [
+  { key: "today", label: "Hoje" },
+  { key: "plan", label: "Plano" },
+  { key: "history", label: "Hist." },
+  { key: "insights", label: "Sinais" },
+  { key: "profile", label: "Perfil" }
+];
 
 export default function App() {
   const [onboarded, setOnboarded] = useState(false);
-  const [tab, setTab] = useState<"today" | "profile">("today");
+  const [tab, setTab] = useState<MainTab>("today");
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -20,14 +32,13 @@ export default function App() {
         <StatusBar style="dark" />
         {onboarded ? (
           <View style={styles.shell}>
-            <View style={styles.content}>{tab === "today" ? <TodayScreen /> : <ProfileScreen />}</View>
+            <View style={styles.content}>{renderTab(tab)}</View>
             <View style={styles.tabs}>
-              <Pressable style={[styles.tab, tab === "today" && styles.activeTab]} onPress={() => setTab("today")}>
-                <Text style={[styles.tabText, tab === "today" && styles.activeTabText]}>Hoje</Text>
-              </Pressable>
-              <Pressable style={[styles.tab, tab === "profile" && styles.activeTab]} onPress={() => setTab("profile")}>
-                <Text style={[styles.tabText, tab === "profile" && styles.activeTabText]}>Perfil</Text>
-              </Pressable>
+              {tabs.map((item) => (
+                <Pressable key={item.key} style={[styles.tab, tab === item.key && styles.activeTab]} onPress={() => setTab(item.key)}>
+                  <Text style={[styles.tabText, tab === item.key && styles.activeTabText]} numberOfLines={1} adjustsFontSizeToFit>{item.label}</Text>
+                </Pressable>
+              ))}
             </View>
           </View>
         ) : (
@@ -36,6 +47,14 @@ export default function App() {
       </SafeAreaProvider>
     </QueryClientProvider>
   );
+}
+
+function renderTab(tab: MainTab) {
+  if (tab === "plan") return <WeeklyPlanScreen />;
+  if (tab === "history") return <HistoryScreen />;
+  if (tab === "insights") return <InsightsScreen />;
+  if (tab === "profile") return <ProfileScreen />;
+  return <TodayScreen />;
 }
 
 const styles = StyleSheet.create({
@@ -53,7 +72,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderTopWidth: 1,
     flexDirection: "row",
-    gap: spacing.sm,
+    gap: spacing.xs,
     margin: spacing.md,
     padding: spacing.sm
   },
@@ -62,13 +81,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     flex: 1,
     minHeight: 44,
-    justifyContent: "center"
+    justifyContent: "center",
+    paddingHorizontal: spacing.xs
   },
   activeTab: {
     backgroundColor: colors.ink
   },
   tabText: {
     color: colors.ink,
+    fontSize: 12,
     fontWeight: "800"
   },
   activeTabText: {

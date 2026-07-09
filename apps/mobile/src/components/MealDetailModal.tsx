@@ -48,7 +48,8 @@ export function MealDetailModal({
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["daily-dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["meal-detail", mealId] })
+        queryClient.invalidateQueries({ queryKey: ["meal-detail", mealId] }),
+        queryClient.invalidateQueries({ queryKey: ["profile-lite"] })
       ]);
     }
   });
@@ -63,7 +64,8 @@ export function MealDetailModal({
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["daily-dashboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["meal-detail", mealId] })
+        queryClient.invalidateQueries({ queryKey: ["meal-detail", mealId] }),
+        queryClient.invalidateQueries({ queryKey: ["profile-lite"] })
       ]);
     }
   });
@@ -108,6 +110,7 @@ export function MealDetailModal({
             <Metric label="Proteina" value={`${current?.proteinEstimate ?? meal.selected.meal.proteinEstimate}g`} tone="sage" />
             <Metric label="Hidratos" value={typeof carbs === "number" ? `${carbs}g` : "-"} tone="blue" />
             <Metric label="Gordura" value={typeof fat === "number" ? `${fat}g` : "-"} />
+            <Metric label="Score" value={`${Math.round(meal.selected.score * 100)}%`} tone="sage" />
           </View>
 
           <InfoPanel title="Porque escolhi" body={meal.selected.rationale[0] ?? "Escolhi esta opcao por equilibrar macros, volume e tolerancia."} />
@@ -127,10 +130,20 @@ export function MealDetailModal({
 
           <DetailSection title="Ingredientes" empty="Ingredientes ainda nao definidos na API." items={ingredients} />
           <DetailSection title="Receita" empty="Passos de receita ainda nao definidos na API." items={recipeSteps} numbered />
-          <InfoPanel
-            title="Historico curto"
-            body={lastFeedback ? `Ultimo feedback: ${feedbackLabel[lastFeedback.mood]}, ${lastFeedback.eatenPercentage}% comido.` : "Ainda nao ha feedback registado nesta refeicao."}
-          />
+          <View style={styles.section}>
+            <SectionTitle>Historico</SectionTitle>
+            {lastFeedback ? (
+              <Text style={styles.bodyText}>Ultimo feedback: {feedbackLabel[lastFeedback.mood]}, {lastFeedback.eatenPercentage}% comido.</Text>
+            ) : (
+              <Text style={styles.bodyText}>Ainda nao ha feedback registado nesta refeicao.</Text>
+            )}
+            {current?.feedbackHistory.length ? current.feedbackHistory.slice(0, 5).map((item) => (
+              <View key={item.id} style={styles.historyItem}>
+                <Text style={styles.historyMood}>{feedbackLabel[item.mood]} · {item.eatenPercentage}%</Text>
+                <Text style={styles.bodyText}>{new Date(item.occurredAt).toLocaleDateString("pt-PT")}</Text>
+              </View>
+            )) : null}
+          </View>
 
           <View style={styles.actions}>
             <PrimaryButton label="Marcar como comida" onPress={() => onMarkEaten(meal)} variant="dark" />
@@ -315,6 +328,19 @@ const styles = StyleSheet.create({
   altName: {
     color: colors.ink,
     fontSize: 15,
+    fontWeight: "800"
+  },
+  historyItem: {
+    backgroundColor: colors.oatSoft,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    gap: spacing.xxs,
+    padding: spacing.md
+  },
+  historyMood: {
+    color: colors.ink,
+    fontSize: 14,
     fontWeight: "800"
   }
 });

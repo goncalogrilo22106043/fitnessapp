@@ -12,3 +12,4 @@ coverage
 *.log
 *.tsbuildinfo
 ROTINA_VERCEL_IMPORT/
+Library/
