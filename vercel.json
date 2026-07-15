@@ -5,14 +5,14 @@
   "installCommand": "npm install",
   "builds": [
     {
-      "src": "server.ts",
+      "src": "server.mts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "server.ts"
+      "dest": "server.mts"
     }
   ]
 }

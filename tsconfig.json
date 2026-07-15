@@ -5,7 +5,7 @@
     "types": ["node"]
   },
   "include": [
-    "server.ts",
+    "server.mts",
     "apps/api/src/**/*.ts",
     "packages/domain/src/**/*.ts"
   ]

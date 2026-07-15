@@ -176,7 +176,7 @@ Vercel setup:
 1. Create or import a Vercel project from the GitHub repository.
 2. Set Root Directory to the repository root. Do not set it to `apps/api`.
 3. Keep Framework Preset as Other.
-4. Vercel uses `server.ts` at the repository root as the Node/Express entrypoint.
+4. Vercel uses `server.mts` at the repository root as the Node/Express entrypoint.
 5. Build Command:
 
 ```bash
@@ -227,7 +227,7 @@ Run seed manually only when needed:
 npm run db:seed
 ```
 
-The API is deployed as a Vercel Node.js server entrypoint. Vercel detects the root `server.ts`, captures `app.listen()`, and routes requests to the Express app. This avoids using `apps/api` as an isolated root, so the monorepo workspace `@rotina/domain` is available during install/build.
+The API is deployed as a Vercel Node.js server entrypoint. Vercel uses the root `server.mts`, captures `app.listen()`, and routes requests to the Express app. The `.mts` extension keeps the entrypoint in ES Module mode, matching the API build and avoiding CommonJS runtime errors. This also avoids using `apps/api` as an isolated root, so the monorepo workspace `@rotina/domain` is available during install/build.
 
 ## Railway Legacy
 
