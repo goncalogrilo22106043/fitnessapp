@@ -227,7 +227,7 @@ Run seed manually only when needed:
 npm run db:seed
 ```
 
-The API is deployed as a Vercel Node.js server entrypoint. Vercel uses the root `server.mts`, captures `app.listen()`, and routes requests to the Express app. The Vercel build first creates `dist/vercel/server.mjs`, a bundled API entrypoint that includes `@rotina/domain`, so the serverless function does not need to resolve the workspace package at runtime. This avoids using `apps/api` as an isolated root and prevents monorepo resolution errors in production.
+The API is deployed as a Vercel Node.js server entrypoint. Vercel uses the root `server.mts`, captures `app.listen()`, and routes requests to the Express app. The API imports the domain package through real monorepo source paths for the Vercel runtime, so the serverless function does not need to resolve `@rotina/domain` as a workspace package after deployment. Keep the Vercel Root Directory at the repository root, not `apps/api`.
 
 ## Railway Legacy
 

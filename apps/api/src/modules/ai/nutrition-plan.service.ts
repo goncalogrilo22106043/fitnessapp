@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { env } from "../../config/env.js";
 import { prisma } from "../../db/prisma.js";
-import { ENGINE_VERSION } from "@rotina/domain";
+import { ENGINE_VERSION } from "../../../../../packages/domain/src/index.js";
 import { buildRoutineContext } from "./routine-context.builder.js";
 import { callOpenAiJson } from "./openai.client.js";
 import { RoutineAnalysisOutput, routineAnalysisSchema } from "./nutrition-plan.schema.js";

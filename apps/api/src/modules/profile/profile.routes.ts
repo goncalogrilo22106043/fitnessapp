@@ -1,4 +1,4 @@
-import { calculateOnboardingNutrition, calculateWaterTarget } from "@rotina/domain";
+import { calculateOnboardingNutrition, calculateWaterTarget } from "../../../../../packages/domain/src/index.js";
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../db/prisma.js";

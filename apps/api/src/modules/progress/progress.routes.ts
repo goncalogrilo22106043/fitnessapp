@@ -1,4 +1,4 @@
-import { calculateWeightTrend, summarizeHydration } from "@rotina/domain";
+import { calculateWeightTrend, summarizeHydration } from "../../../../../packages/domain/src/index.js";
 import { Prisma } from "@prisma/client";
 import { Router } from "express";
 import { z } from "zod";

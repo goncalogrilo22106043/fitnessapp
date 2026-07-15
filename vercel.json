@@ -6,12 +6,7 @@
   "builds": [
     {
       "src": "server.mts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "dist/vercel/server.mjs"
-        ]
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [

@@ -1,4 +1,4 @@
-import { MealFeedback, MealOption, UserNutritionProfile } from "@rotina/domain";
+import { MealFeedback, MealOption, UserNutritionProfile } from "../../../../../packages/domain/src/index.js";
 import { MealFeedback as PrismaFeedback, MealOption as PrismaMealOption, UserProfile } from "@prisma/client";
 
 export function toDomainMeal(meal: PrismaMealOption): MealOption {

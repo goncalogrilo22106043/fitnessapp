@@ -6,7 +6,6 @@
   },
   "include": [
     "server.mts",
-    "apps/api/src/vercel.ts",
     "apps/api/src/**/*.ts",
     "packages/domain/src/**/*.ts"
   ]
