@@ -94,9 +94,11 @@ export function ProfileScreen() {
         <Card>
           <SectionTitle>Tolerancia alimentar</SectionTitle>
           <View style={styles.preferenceList}>
-            <Preference label="Volume baixo" value={`${Math.round((profile.data?.profile?.preferredVolumes.low ?? 0) * 100)}%`} />
-            <Preference label="Volume medio" value={`${Math.round((profile.data?.profile?.preferredVolumes.medium ?? 0) * 100)}%`} />
-            <Preference label="Texturas evitadas" value={profile.data?.profile?.avoidedIngredients.join(", ") || "nenhuma"} />
+            <Preference label="Volume baixo" value={`${Math.round(((profile.data?.profile?.preferredVolumes ?? {}).low ?? 0) * 100)}%`} />
+            <Preference label="Volume medio" value={`${Math.round(((profile.data?.profile?.preferredVolumes ?? {}).medium ?? 0) * 100)}%`} />
+            <Preference label="Texturas evitadas" value={listText(profile.data?.profile?.avoidedTextures, "nenhuma")} />
+            <Preference label="Alimentos seguros" value={listText(profile.data?.profile?.safeFoods, "ainda sem lista")} />
+            <Preference label="Alimentos rejeitados" value={listText(profile.data?.profile?.dislikedFoods, "nenhum")} />
           </View>
         </Card>
 
@@ -104,13 +106,44 @@ export function ProfileScreen() {
           <SectionTitle>Treino e preferencias</SectionTitle>
           <View style={styles.preferenceList}>
             <Preference label="Rotina" value={`${profile.data?.routine?.trainingDaysPerWeek ?? 0} treinos por semana`} />
+            <Preference label="Horario treino" value={profile.data?.routine?.trainingTime ?? "por definir"} />
             <Preference label="Cozinha" value={`${profile.data?.budget?.maxCookingMinutes ?? 0} min max.`} />
-            <Preference label="Modo" value={profile.data?.profile?.eatingMode === "easy_bulking" ? "Bulking Facil" : "Bulking Limpo"} />
+            <Preference label="Modo" value={modeLabel(profile.data?.profile?.eatingMode)} />
+          </View>
+        </Card>
+
+        <Card tone="warm">
+          <View style={styles.cardHeader}>
+            <SectionTitle>O teu padrao alimentar</SectionTitle>
+            <Badge label="Meal Genome" tone="gold" />
+          </View>
+          <View style={styles.preferenceList}>
+            <Preference label="Maior apetite" value={profile.data?.profile?.bestAppetiteTime ?? "por descobrir"} />
+            <Preference label="Menor apetite" value={profile.data?.profile?.worstAppetiteTime ?? "por descobrir"} />
+            <Preference label="Volume tolerado" value={profile.data?.profile?.volumeTolerance ?? "medio"} />
+            <Preference label="Dias dificeis" value={listText(profile.data?.profile?.hardEatingDays, "nenhum definido")} />
+            <Preference label="Favoritos alimentares" value={listText(profile.data?.profile?.favoriteFoods, "ainda sem lista")} />
+            <Preference label="Preferencia manha" value={flavorLabel(profile.data?.profile?.preferredFlavors)} />
           </View>
         </Card>
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function modeLabel(mode?: string) {
+  if (mode === "easy_bulking") return "Bulking Facil";
+  if (mode === "balanced") return "Equilibrado";
+  return "Bulking Limpo";
+}
+
+function flavorLabel(flavors?: Record<string, number>) {
+  const favorite = Object.entries(flavors ?? {}).sort((left, right) => right[1] - left[1])[0]?.[0];
+  return favorite ?? "por descobrir";
+}
+
+function listText(values: string[] | undefined | null, fallback: string) {
+  return values && values.length > 0 ? values.join(", ") : fallback;
 }
 
 function Preference({ label, value }: { label: string; value: string }) {

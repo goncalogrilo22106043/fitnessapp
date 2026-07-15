@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ensureDemoSession } from "../features/auth/authApi";
 import { createWeeklyPlan, getLatestWeeklyPlan, getSubstitutions, swapMeal } from "../features/plans/planApi";
 import { MealAlternative, PlanMeal } from "../features/plans/types";
+import { getProfile } from "../features/profile/profileApi";
 import { Badge, Card, EmptyState, LoadingSkeleton, Metric, PrimaryButton, SectionTitle } from "../ui/components";
 import { colors, radius, spacing, typography } from "../ui/theme";
 import { mealTimeLabel } from "../components/MealCard";
@@ -21,6 +22,14 @@ export function WeeklyPlanScreen() {
     queryFn: async () => {
       await ensureDemoSession();
       return getLatestWeeklyPlan();
+    },
+    retry: false
+  });
+  const profile = useQuery({
+    queryKey: ["profile-lite"],
+    queryFn: async () => {
+      await ensureDemoSession();
+      return getProfile();
     },
     retry: false
   });
@@ -99,6 +108,10 @@ export function WeeklyPlanScreen() {
         {days.length > 0 ? (
           <>
             <PrimaryButton label={generate.isPending ? "A gerar..." : "Gerar nova semana"} onPress={() => generate.mutate()} disabled={generate.isPending} />
+            <View style={styles.groupHeader}>
+              <Text style={styles.groupLabel}>Escolher dia da semana</Text>
+              <Text style={styles.groupHelper}>Seleciona o dia que queres ver em detalhe.</Text>
+            </View>
             <View style={styles.dayStrip}>
               {days.map((day) => (
                 <Pressable
@@ -120,7 +133,10 @@ export function WeeklyPlanScreen() {
                       <SectionTitle>{longDate(day.date)}</SectionTitle>
                       <Text style={styles.muted}>{day.meals.length} refeicoes planeadas</Text>
                     </View>
-                    <Badge label={`Variedade ${day.variety}%`} tone={day.variety >= 75 ? "sage" : "gold"} />
+                    <View style={styles.badgeStack}>
+                      <Badge label={isTrainingDay(day.date, profile.data?.routine?.trainingDays ?? []) ? "treino" : "descanso"} tone={isTrainingDay(day.date, profile.data?.routine?.trainingDays ?? []) ? "blue" : "neutral"} />
+                      <Badge label={`Variedade ${day.variety}%`} tone={day.variety >= 75 ? "sage" : "gold"} />
+                    </View>
                   </View>
                   <View style={styles.metrics}>
                     <Metric label="Kcal" value={`${day.calories}`} tone="gold" />
@@ -143,6 +159,7 @@ export function WeeklyPlanScreen() {
             {swapMealTarget ? (
               <Card tone="warm">
                 <SectionTitle>Alternativas para {mealTimeLabel[swapMealTarget.mealTime]}</SectionTitle>
+                <Text style={styles.groupHelper}>Escolhe uma alternativa para substituir esta refeicao no plano.</Text>
                 {alternatives.length === 0 ? (
                   <Text style={styles.muted}>{substitutions.isPending ? "A procurar alternativas reais..." : "Sem alternativas encontradas para esta refeicao."}</Text>
                 ) : alternatives.map((alternative) => (
@@ -183,6 +200,11 @@ function longDate(date: string) {
   return new Date(`${date}T00:00:00`).toLocaleDateString("pt-PT", { weekday: "long", day: "2-digit", month: "short" });
 }
 
+function isTrainingDay(date: string, trainingDays: string[]) {
+  const day = new Date(`${date}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+  return trainingDays.includes(day);
+}
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   container: { gap: spacing.lg, padding: spacing.lg },
@@ -191,12 +213,16 @@ const styles = StyleSheet.create({
   title: { ...typography.title, color: colors.ink },
   subtitle: { color: colors.muted, fontSize: 16, lineHeight: 23 },
   dayStrip: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  groupHeader: { gap: spacing.xs },
+  groupLabel: { color: colors.ink, fontSize: 13, fontWeight: "800" },
+  groupHelper: { color: colors.muted, fontSize: 13, lineHeight: 18 },
   dayPill: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.lg, borderWidth: 1, minWidth: 74, padding: spacing.md },
   dayPillActive: { backgroundColor: colors.ink, borderColor: colors.ink },
   dayLabel: { color: colors.ink, fontSize: 14, fontWeight: "800", textTransform: "capitalize" },
   dayLabelActive: { color: colors.surface },
   dayMeta: { color: colors.muted, fontSize: 12, fontWeight: "700", marginTop: spacing.xs },
   cardHeader: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md, justifyContent: "space-between" },
+  badgeStack: { alignItems: "flex-end", gap: spacing.xs },
   metrics: { flexDirection: "row", gap: spacing.sm },
   mealRow: { backgroundColor: colors.backgroundSoft, borderColor: colors.line, borderRadius: radius.lg, borderWidth: 1, gap: spacing.md, padding: spacing.md },
   mealText: { gap: spacing.xs },

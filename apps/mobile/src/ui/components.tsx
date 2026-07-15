@@ -98,6 +98,58 @@ export function Badge({ label, tone = "neutral" }: { label: string; tone?: "neut
   );
 }
 
+export function SelectionGroup({
+  label,
+  helperText,
+  options,
+  selectedValue,
+  selectedValues,
+  onChange,
+  multiSelect = false
+}: {
+  label: string;
+  helperText?: string;
+  options: Array<{ value: string; label: string }>;
+  selectedValue?: string;
+  selectedValues?: string[];
+  onChange: (value: string | string[]) => void;
+  multiSelect?: boolean;
+}) {
+  const values = selectedValues ?? (selectedValue ? [selectedValue] : []);
+
+  function handlePress(value: string) {
+    if (!multiSelect) {
+      onChange(value);
+      return;
+    }
+
+    onChange(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
+  }
+
+  return (
+    <View style={styles.selectionGroup}>
+      <View style={styles.selectionHeader}>
+        <Text style={styles.selectionLabel}>{label}</Text>
+        {helperText ? <Text style={styles.selectionHelper}>{helperText}</Text> : null}
+      </View>
+      <View style={styles.selectionOptions}>
+        {options.map((option) => {
+          const active = values.includes(option.value);
+          return (
+            <Pressable
+              key={option.value}
+              style={({ pressed }) => [styles.selectionOption, active && styles.selectionOptionActive, pressed && styles.pressed]}
+              onPress={() => handlePress(option.value)}
+            >
+              <Text style={[styles.selectionOptionText, active && styles.selectionOptionTextActive]}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 export function EmptyState({
   title,
   body,
@@ -303,6 +355,46 @@ const styles = StyleSheet.create({
   },
   badgeTextGold: {
     color: colors.gold
+  },
+  selectionGroup: {
+    gap: spacing.sm
+  },
+  selectionHeader: {
+    gap: spacing.xs
+  },
+  selectionLabel: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "800"
+  },
+  selectionHelper: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  selectionOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm
+  },
+  selectionOption: {
+    backgroundColor: colors.backgroundSoft,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  selectionOptionActive: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink
+  },
+  selectionOptionText: {
+    color: colors.ink,
+    fontWeight: "800"
+  },
+  selectionOptionTextActive: {
+    color: colors.surface
   },
   emptyTitle: {
     color: colors.ink,

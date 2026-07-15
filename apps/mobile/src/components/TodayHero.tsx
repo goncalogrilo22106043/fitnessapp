@@ -10,24 +10,30 @@ export function TodayHero({
   waterTargetMilliliters
 }: {
   name: string;
-  mode: "clean_bulking" | "easy_bulking";
+  mode: "clean_bulking" | "easy_bulking" | "balanced";
   dashboard: DailyDashboard | undefined;
   waterTargetMilliliters: number;
 }) {
   const calorieTarget = dashboard?.calorieTarget ?? 0;
   const proteinTarget = dashboard?.proteinTarget ?? 0;
   const waterConsumed = dashboard?.hydrationMilliliters ?? 0;
+  const caloriesConsumed = dashboard?.caloriesConsumed ?? 0;
+  const caloriesRemaining = Math.max(calorieTarget - caloriesConsumed, 0);
+  const proteinConsumed = dashboard?.proteinConsumed ?? 0;
+  const proteinRemaining = Math.max(proteinTarget - proteinConsumed, 0);
+  const mealsEaten = dashboard?.mealProgress?.eatenMeals ?? 0;
+  const mealsRemaining = dashboard?.mealProgress?.remainingMeals ?? dashboard?.meals.length ?? 0;
   const waterProgress = waterTargetMilliliters > 0 ? Math.round((waterConsumed / waterTargetMilliliters) * 100) : 0;
-  const calorieProgress = calorieTarget > 0 ? Math.round(((dashboard?.caloriesConsumed ?? 0) / calorieTarget) * 100) : 0;
+  const calorieProgress = calorieTarget > 0 ? Math.round((caloriesConsumed / calorieTarget) * 100) : 0;
 
   return (
     <View style={styles.hero}>
       <View style={styles.topRow}>
         <View style={styles.titleBlock}>
           <Text style={styles.eyebrow}>Hoje</Text>
-          <Text style={styles.greeting}>Bom dia, {name}</Text>
+          <Text style={styles.greeting}>{getGreeting()}, {name}</Text>
         </View>
-        <Badge label={mode === "easy_bulking" ? "Bulking Facil" : "Bulking Limpo"} tone="sage" />
+        <Badge label={mode === "easy_bulking" ? "Bulking Facil" : mode === "balanced" ? "Equilibrado" : "Bulking Limpo"} tone="sage" />
       </View>
 
       <Text style={styles.message}>Manter calorias perto da meta, com refeicoes que caibam no apetite real.</Text>
@@ -35,28 +41,37 @@ export function TodayHero({
       <View style={styles.goalPanel}>
         <View style={styles.goalHeader}>
           <Text style={styles.goalLabel}>Objetivo do dia</Text>
-          <Text style={styles.goalValue}>{calorieTarget || "-"} kcal</Text>
+          <Text style={styles.goalValue}>{caloriesConsumed}/{calorieTarget || "-"} kcal</Text>
         </View>
         <ProgressBar value={calorieProgress} tone="gold" />
+        <Text style={styles.goalHint}>{caloriesRemaining} kcal por ingerir hoje</Text>
       </View>
 
       <View style={styles.metrics}>
-        <HeroMetric label="Proteina" value={`${proteinTarget || 0}g`} />
+        <HeroMetric label="Refeicoes" value={`${mealsEaten} feitas / ${mealsRemaining} faltam`} />
+        <HeroMetric label="Proteina" value={`${proteinConsumed}/${proteinTarget || 0}g`} helper={`${proteinRemaining}g faltam`} />
         <HeroMetric label="Agua" value={`${waterConsumed}/${waterTargetMilliliters}ml`} progress={waterProgress} />
-        <HeroMetric label="Consistencia" value={`${dashboard?.consistencyScore ?? 0}%`} />
       </View>
     </View>
   );
 }
 
-function HeroMetric({ label, value, progress }: { label: string; value: string; progress?: number }) {
+function HeroMetric({ label, value, helper, progress }: { label: string; value: string; helper?: string; progress?: number }) {
   return (
     <View style={styles.metric}>
       <Text style={styles.metricLabel}>{label}</Text>
       <Text style={styles.metricValue}>{value}</Text>
+      {helper ? <Text style={styles.metricHelper}>{helper}</Text> : null}
       {typeof progress === "number" ? <ProgressBar value={progress} tone="blue" /> : null}
     </View>
   );
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Bom dia";
+  if (hour < 20) return "Boa tarde";
+  return "Boa noite";
 }
 
 const styles = StyleSheet.create({
@@ -114,6 +129,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800"
   },
+  goalHint: {
+    color: "#B9C6BD",
+    fontSize: 12,
+    fontWeight: "700"
+  },
   metrics: {
     flexDirection: "row",
     gap: spacing.sm
@@ -136,5 +156,10 @@ const styles = StyleSheet.create({
     color: colors.surface,
     fontSize: 13,
     fontWeight: "800"
+  },
+  metricHelper: {
+    color: "#B9C6BD",
+    fontSize: 11,
+    fontWeight: "700"
   }
 });

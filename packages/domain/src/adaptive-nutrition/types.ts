@@ -12,7 +12,7 @@ export type BudgetLevel = "low" | "medium" | "high";
 
 export type CookingTimeLevel = "quick" | "standard" | "slow";
 
-export type EatingMode = "clean_bulking" | "easy_bulking";
+export type EatingMode = "clean_bulking" | "easy_bulking" | "balanced";
 
 export type BodyGoal = "lean_gain" | "maintenance" | "fat_loss";
 
@@ -67,6 +67,29 @@ export interface UserNutritionProfile {
   safeMealIds: string[];
   favoriteMealIds?: string[];
   eatingMode?: EatingMode;
+  wakeTime?: string | null;
+  sleepTime?: string | null;
+  workType?: "seated" | "mixed" | "active" | string | null;
+  hardEatingDays?: string[];
+  trainingDays?: string[];
+  trainingTime?: string | null;
+  trainingIntensity?: "low" | "moderate" | "high" | string | null;
+  appetiteMorning?: "low" | "medium" | "high" | string | null;
+  appetiteNight?: "low" | "medium" | "high" | string | null;
+  bestAppetiteTime?: string | null;
+  worstAppetiteTime?: string | null;
+  volumeTolerance?: VolumeLevel | string | null;
+  avoidedTextures?: string[];
+  preferredTextureStyle?: string | null;
+  nauseaFoods?: string[];
+  safeFoods?: string[];
+  favoriteFoods?: string[];
+  dislikedFoods?: string[];
+  allergies?: string[];
+  dietType?: string | null;
+  planMode?: EatingMode | string | null;
+  desiredPace?: "calm" | "normal" | "aggressive" | string | null;
+  targetWeightKilograms?: number | null;
 }
 
 export interface NutritionTargets {

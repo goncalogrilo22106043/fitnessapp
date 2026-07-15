@@ -1,0 +1,5 @@
+ALTER TABLE "MealFeedback"
+ADD COLUMN "notes" TEXT,
+ADD COLUMN "issueTags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "dislikedIngredients" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "aiSummary" TEXT;

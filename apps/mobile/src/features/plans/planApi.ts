@@ -18,8 +18,11 @@ export async function sendMealFeedback(input: {
   mealTime: string;
   mood: FeedbackMood;
   eatenPercentage: number;
+  notes?: string;
+  issueTags?: string[];
+  dislikedIngredients?: string[];
 }) {
-  return apiRequest<{ message: string }>("/feedback", {
+  return apiRequest<{ message: string; learning?: { dislikedIngredients: string[]; issueTags: string[]; usedAi: boolean } }>("/feedback", {
     method: "POST",
     body: JSON.stringify(input)
   });

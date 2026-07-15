@@ -90,9 +90,26 @@ plansRouter.get("/latest", authenticate, async (request, response) => {
 plansRouter.get("/daily", authenticate, async (request, response) => {
   const { date } = dateSchema.parse(request.query);
   const userId = (request as AuthenticatedRequest).userId;
-  const dailyPlan = await loadDailyPlan(userId, date);
+  const [dailyPlan, feedback] = await Promise.all([
+    loadDailyPlan(userId, date),
+    prisma.mealFeedback.findMany({
+      where: {
+        userId,
+        occurredAt: dayRange(date)
+      }
+    })
+  ]);
+  const eatenMealIds = [...new Set(feedback.map((item) => item.mealId))];
 
-  response.json(engine.getDailyDashboard(dailyPlan));
+  response.json({
+    ...engine.getDailyDashboard(dailyPlan),
+    mealProgress: {
+      totalMeals: dailyPlan.meals.length,
+      eatenMeals: eatenMealIds.length,
+      remainingMeals: Math.max(dailyPlan.meals.length - eatenMealIds.length, 0),
+      eatenMealIds
+    }
+  });
 });
 
 plansRouter.post("/daily/hard-day", authenticate, async (request, response) => {

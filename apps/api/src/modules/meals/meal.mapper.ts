@@ -69,10 +69,33 @@ export function toDomainProfile(profile: UserProfile): UserNutritionProfile {
     budgetPreference: profile.budgetPreference as UserNutritionProfile["budgetPreference"],
     cookingTimePreference: profile.cookingTimePreference as UserNutritionProfile["cookingTimePreference"],
     safeMealIds: profile.safeMealIds,
-    favoriteMealIds: profile.favoriteMealIds
+    favoriteMealIds: profile.favoriteMealIds,
+    wakeTime: profile.wakeTime,
+    sleepTime: profile.sleepTime,
+    workType: profile.workType,
+    hardEatingDays: profile.hardEatingDays,
+    trainingDays: [],
+    trainingTime: null,
+    trainingIntensity: null,
+    appetiteMorning: profile.appetiteMorning,
+    appetiteNight: profile.appetiteNight,
+    bestAppetiteTime: profile.bestAppetiteTime,
+    worstAppetiteTime: profile.worstAppetiteTime,
+    volumeTolerance: profile.volumeTolerance,
+    avoidedTextures: profile.avoidedTextures,
+    preferredTextureStyle: profile.preferredTextureStyle,
+    nauseaFoods: profile.nauseaFoods,
+    safeFoods: profile.safeFoods,
+    favoriteFoods: profile.favoriteFoods,
+    dislikedFoods: profile.dislikedFoods,
+    allergies: profile.allergies,
+    dietType: profile.dietType,
+    planMode: profile.planMode,
+    desiredPace: profile.desiredPace,
+    targetWeightKilograms: profile.targetWeightKilograms
   };
 
-  if (profile.eatingMode === "clean_bulking" || profile.eatingMode === "easy_bulking") {
+  if (profile.eatingMode === "clean_bulking" || profile.eatingMode === "easy_bulking" || profile.eatingMode === "balanced") {
     domainProfile.eatingMode = profile.eatingMode;
   }
 

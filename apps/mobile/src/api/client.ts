@@ -29,6 +29,14 @@ export function setSession(nextSession: ApiSession) {
   session = nextSession;
 }
 
+export function hasSession() {
+  return Boolean(session);
+}
+
+export function clearSession() {
+  session = null;
+}
+
 export async function apiRequest<TResponse>(
   path: string,
   options: RequestInit = {}

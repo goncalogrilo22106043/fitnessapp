@@ -16,7 +16,7 @@ const recalcSchema = z.object({
   heightCentimeters: z.number().int().min(120).max(230),
   weightKilograms: z.number().min(35).max(250),
   bodyGoal: z.enum(["lean_gain", "maintenance", "fat_loss"]),
-  eatingMode: z.enum(["clean_bulking", "easy_bulking"]),
+  eatingMode: z.enum(["clean_bulking", "easy_bulking", "balanced"]),
   trainingDaysPerWeek: z.number().int().min(0).max(7),
   mealTimes: z.array(z.enum(["breakfast", "lunch", "snack", "dinner"])).min(3).max(6)
 });
@@ -64,6 +64,7 @@ profileRouter.post("/recalculate-targets", authenticate, async (request, respons
       where: { userId },
       data: {
         bodyGoal: input.bodyGoal,
+        planMode: input.eatingMode,
         eatingMode: input.eatingMode,
         dailyWaterTargetMl: calculateWaterTarget(input.weightKilograms)
       }

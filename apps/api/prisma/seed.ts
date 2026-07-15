@@ -1,6 +1,12 @@
-import { PrismaClient } from "@prisma/client";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import dotenv from "dotenv";
+import { Prisma, PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { calculateOnboardingNutrition } from "@rotina/domain";
+
+const envPath = [join(process.cwd(), ".env"), join(process.cwd(), "apps/api/.env")].find((path) => existsSync(path));
+dotenv.config(envPath ? { path: envPath, override: true } : { override: true });
 
 const prisma = new PrismaClient();
 
@@ -95,7 +101,7 @@ const meals = [
       tags: ["sopa", "tostas"]
     }
   }
-];
+] satisfies Prisma.MealOptionUncheckedCreateInput[];
 
 async function main() {
   for (const meal of meals) {
@@ -139,6 +145,26 @@ async function main() {
       preferredVolumes: { low: 0.95, medium: 0.55, high: 0.12 },
       preferredFlavors: { doce: 0.9, fresco: 0.75, suave: 0.8 },
       avoidedIngredients: ["seco"],
+      wakeTime: "07:30",
+      sleepTime: "23:30",
+      workType: "mixed",
+      hardEatingDays: ["monday", "thursday"],
+      targetWeightKilograms: 70,
+      desiredPace: "normal",
+      appetiteMorning: "low",
+      appetiteNight: "medium",
+      bestAppetiteTime: "18:00",
+      worstAppetiteTime: "08:00",
+      volumeTolerance: "low",
+      avoidedTextures: ["dry"],
+      preferredTextureStyle: "mixed",
+      nauseaFoods: ["frango seco", "arroz seco"],
+      safeFoods: ["iogurte", "wrap", "smoothie"],
+      favoriteFoods: ["aveia", "frutos vermelhos", "wraps"],
+      dislikedFoods: ["comida seca"],
+      allergies: [],
+      dietType: "omnivore",
+      planMode: "easy_bulking",
       budgetPreference: "medium",
       cookingTimePreference: "quick",
       safeMealIds: ["iogurte-proteico-com-aveia-e-frutos-vermelhos"],
@@ -153,6 +179,26 @@ async function main() {
       preferredVolumes: { low: 0.95, medium: 0.55, high: 0.12 },
       preferredFlavors: { doce: 0.9, fresco: 0.75, suave: 0.8 },
       avoidedIngredients: ["seco"],
+      wakeTime: "07:30",
+      sleepTime: "23:30",
+      workType: "mixed",
+      hardEatingDays: ["monday", "thursday"],
+      targetWeightKilograms: 70,
+      desiredPace: "normal",
+      appetiteMorning: "low",
+      appetiteNight: "medium",
+      bestAppetiteTime: "18:00",
+      worstAppetiteTime: "08:00",
+      volumeTolerance: "low",
+      avoidedTextures: ["dry"],
+      preferredTextureStyle: "mixed",
+      nauseaFoods: ["frango seco", "arroz seco"],
+      safeFoods: ["iogurte", "wrap", "smoothie"],
+      favoriteFoods: ["aveia", "frutos vermelhos", "wraps"],
+      dislikedFoods: ["comida seca"],
+      allergies: [],
+      dietType: "omnivore",
+      planMode: "easy_bulking",
       budgetPreference: "medium",
       cookingTimePreference: "quick",
       safeMealIds: ["iogurte-proteico-com-aveia-e-frutos-vermelhos"],
@@ -171,8 +217,25 @@ async function main() {
 
   await prisma.trainingRoutine.upsert({
     where: { userId: user.id },
-    update: { trainingDaysPerWeek: 6, trainingType: "musculacao", preferredTimes: ["evening"] },
-    create: { userId: user.id, trainingDaysPerWeek: 6, trainingType: "musculacao", preferredTimes: ["evening"] }
+    update: {
+      trainingDaysPerWeek: 6,
+      trainingType: "musculacao",
+      preferredTimes: ["evening"],
+      trainingDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+      trainingTime: "18:00",
+      trainingIntensity: "high",
+      restDays: ["sunday"]
+    },
+    create: {
+      userId: user.id,
+      trainingDaysPerWeek: 6,
+      trainingType: "musculacao",
+      preferredTimes: ["evening"],
+      trainingDays: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+      trainingTime: "18:00",
+      trainingIntensity: "high",
+      restDays: ["sunday"]
+    }
   });
 
   await prisma.budgetProfile.upsert({

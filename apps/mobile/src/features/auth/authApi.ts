@@ -1,4 +1,4 @@
-import { ApiError, apiRequest, setSession } from "../../api/client";
+import { ApiError, apiRequest, hasSession, setSession } from "../../api/client";
 
 const demoCredentials = {
   email: "demo@rotina.local",
@@ -7,6 +7,10 @@ const demoCredentials = {
 };
 
 export async function ensureDemoSession() {
+  if (hasSession()) {
+    return;
+  }
+
   try {
     const session = await apiRequest<{ token: string }>("/auth/login", {
       method: "POST",
@@ -27,4 +31,22 @@ export async function ensureDemoSession() {
     });
     setSession(session);
   }
+}
+
+export async function registerAccount(input: { email: string; password: string; name: string }) {
+  const session = await apiRequest<{ token: string }>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+  setSession(session);
+  return session;
+}
+
+export async function loginAccount(input: { email: string; password: string }) {
+  const session = await apiRequest<{ token: string }>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+  setSession(session);
+  return session;
 }

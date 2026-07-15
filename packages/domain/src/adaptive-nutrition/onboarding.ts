@@ -23,7 +23,7 @@ export function calculateOnboardingNutrition(input: OnboardingProfileInput): Onb
   const bmr = calculateBmr(input);
   const tdee = Math.round(bmr * activityMultiplier(input.trainingDaysPerWeek));
   const calorieDelta = input.bodyGoal === "lean_gain" ? 250 : input.bodyGoal === "fat_loss" ? -350 : 0;
-  const modeDelta = input.eatingMode === "easy_bulking" ? 150 : 0;
+  const modeDelta = input.eatingMode === "easy_bulking" ? 150 : input.eatingMode === "balanced" ? 75 : 0;
   const calories = Math.round(tdee + calorieDelta + modeDelta);
   const proteinGrams = Math.round(input.weightKilograms * 2);
   const fatGrams = Math.round(input.weightKilograms * 0.8);

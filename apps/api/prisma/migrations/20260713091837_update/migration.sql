@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "RoutineAnalysisCache_userId_routineHash_engineVersion_promptVer" RENAME TO "RoutineAnalysisCache_userId_routineHash_engineVersion_promp_key";

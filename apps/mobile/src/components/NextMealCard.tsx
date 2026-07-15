@@ -59,6 +59,7 @@ export function NextMealCard({
 
       {showAlternatives && alternatives.length > 0 ? (
         <View style={styles.alternatives}>
+          <Text style={styles.groupLabel}>Alternativas sugeridas</Text>
           {alternatives.map((alternative) => (
             <Pressable key={alternative.option.meal.id} style={styles.alternative} onPress={() => onSelectAlternative(alternative)}>
               <Text style={styles.altName}>{alternative.option.meal.name}</Text>
@@ -225,6 +226,11 @@ const styles = StyleSheet.create({
   },
   alternatives: {
     gap: spacing.sm
+  },
+  groupLabel: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "800"
   },
   alternative: {
     backgroundColor: colors.oatSoft,

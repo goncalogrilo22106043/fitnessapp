@@ -44,11 +44,44 @@ model User {
   adjustments  DailyPlanAdjustment[]
   waterLogs    WaterLog[]
   weightLogs   WeightLog[]
+  pantryItems   PantryItem[]
+  aiSuggestions AiMealSuggestion[]
+  routineProfile RoutineProfile?
+  workRoutine WorkRoutine?
+  mealSchedule MealSchedule?
+  trainingBlocks TrainingBlock[]
+  appetiteProfile AppetiteProfile?
+  foodToleranceProfile FoodToleranceProfile?
+  lifestylePreferences LifestylePreferences?
+  onboardingProgress OnboardingProgress?
+  consent UserConsent?
+  routineOverrides RoutineOverride[]
+  routineAnalysisCaches RoutineAnalysisCache[]
 }
 
 model UserProfile {
   id                    String   @id @default(uuid())
   userId                String   @unique
+  wakeTime              String?
+  sleepTime             String?
+  workType              String?
+  hardEatingDays        String[] @default([])
+  targetWeightKilograms Float?
+  desiredPace           String   @default("normal")
+  appetiteMorning       String?
+  appetiteNight         String?
+  bestAppetiteTime      String?
+  worstAppetiteTime     String?
+  volumeTolerance       String?
+  avoidedTextures       String[] @default([])
+  preferredTextureStyle String?
+  nauseaFoods           String[] @default([])
+  safeFoods             String[] @default([])
+  favoriteFoods         String[] @default([])
+  dislikedFoods         String[] @default([])
+  allergies             String[] @default([])
+  dietType              String   @default("omnivore")
+  planMode              String   @default("clean_bulking")
   preferredTextures     Json
   preferredVolumes      Json
   preferredFlavors      Json
@@ -84,6 +117,10 @@ model TrainingRoutine {
   trainingDaysPerWeek Int
   trainingType        String
   preferredTimes      String[]
+  trainingDays        String[] @default([])
+  trainingTime        String?
+  trainingIntensity   String   @default("moderate")
+  restDays            String[] @default([])
   updatedAt           DateTime @updatedAt
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -139,6 +176,10 @@ model MealFeedback {
   hydrationLevel  VolumeLevel?
   trainingDay     Boolean?
   userMood        String?
+  notes           String?
+  issueTags       String[]     @default([])
+  dislikedIngredients String[] @default([])
+  aiSummary       String?
   occurredAt      DateTime     @default(now())
   user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   meal            MealOption   @relation(fields: [mealId], references: [id], onDelete: Cascade)
@@ -214,4 +255,242 @@ model WeightLog {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, occurredAt])
+}
+
+model PantryItem {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  category  String   @default("other")
+  quantity  String?
+  available Boolean  @default(true)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId, available])
+}
+
+model AiMealSuggestion {
+  id          String   @id @default(uuid())
+  userId      String
+  mealTime    MealTime?
+  title       String
+  content     Json
+  model       String
+  promptHash  String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model RoutineProfile {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  profileVersion Int    @default(1)
+  name        String?
+  age         Int?
+  sex         String?
+  heightCm    Int?
+  currentWeightKg Float?
+  goalWeightKg Float?
+  bodyGoal    String?
+  desiredPace String?
+  completedAt DateTime?
+  lastReviewedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WorkRoutine {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  wakeTime              String?
+  usualBedTime          String?
+  sleepDurationEstimate Float?
+  weekdayRoutineDifferentFromWeekend Boolean @default(false)
+  weekendWakeTime       String?
+  weekendBedTime        String?
+  workType              String?
+  workStartTime         String?
+  workEndTime           String?
+  workDays              String[] @default([])
+  breaksAvailable       String[] @default([])
+  canEatAtWork          Boolean?
+  accessToKitchenAtWork Boolean?
+  activityLevel         String?
+  averageDailySteps     Int?
+  commuteDurationMinutes Int?
+  commuteType           String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MealSchedule {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  breakfastTime         String?
+  morningSnackTime      String?
+  lunchTime             String?
+  afternoonSnackTime    String?
+  dinnerTime            String?
+  supperTime            String?
+  mealTimeFlexibility   Json     @default("{}")
+  mealsUsuallySkipped   String[] @default([])
+  mealsHardestToFinish  String[] @default([])
+  weekendMealTimesDifferent Boolean @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TrainingBlock {
+  id          String   @id @default(uuid())
+  userId      String
+  activityType String
+  daysOfWeek  String[] @default([])
+  startTime   String?
+  durationMinutes Int?
+  intensity   String?
+  location    String?
+  preWorkoutMealLeadMinutes Int?
+  postWorkoutMealWindowMinutes Int?
+  appetiteAfterTraining String?
+  isFlexibleTime Boolean @default(false)
+  position    Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, position])
+}
+
+model AppetiteProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  appetiteOnWaking    String?
+  appetiteMorning     String?
+  appetiteLunch       String?
+  appetiteAfternoon   String?
+  appetiteDinner      String?
+  appetiteNight       String?
+  bestAppetiteWindow  String?
+  worstAppetiteWindow String?
+  volumeTolerance     String?
+  eatingSpeed         String?
+  needsLongMealTime   Boolean?
+  preferredMealTemperature String?
+  platePreference     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FoodToleranceProfile {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  avoidedTextures       String[] @default([])
+  preferredTextures     String[] @default([])
+  toleratedTemperatures String[] @default([])
+  avoidedTemperatures   String[] @default([])
+  nauseaFoods           String[] @default([])
+  temporaryFatigueFoods String[] @default([])
+  safeFoods             String[] @default([])
+  favoriteFoods         String[] @default([])
+  dislikedFoods         String[] @default([])
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LifestylePreferences {
+  id                         String   @id @default(uuid())
+  userId                     String   @unique
+  dietType                   String?
+  allergies                  String[] @default([])
+  intolerances               String[] @default([])
+  cookingSkill               String?
+  cookingTimeWeekdayMinutes  Int?
+  cookingTimeWeekendMinutes  Int?
+  batchCookingAvailable      Boolean?
+  budgetLevel                String?
+  mealsPerDayPreference      Int?
+  liquidCaloriesTolerance    String?
+  morningSweetOrSavory       String?
+  planMode                   String?
+  motivation                 String?
+  mainDifficulty             String?
+  previousDietExperience     String?
+  typicalReasonForSkippingMeals String?
+  wantsReminders             Boolean?
+  reminderStyle              String?
+  preferredTone              String?
+  hardEatingDays             String[] @default([])
+  socialMealFrequency        String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OnboardingProgress {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  currentStep String?
+  completedSteps String[] @default([])
+  draftData Json     @default("{}")
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserConsent {
+  id                         String   @id @default(uuid())
+  userId                     String   @unique
+  aiPersonalizationConsent    Boolean  @default(false)
+  aiConsentAt                DateTime?
+  aiConsentVersion           String?
+  dataProcessingConsent      Boolean  @default(false)
+  dataProcessingConsentAt    DateTime?
+  revokedAiConsentAt         DateTime?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RoutineOverride {
+  id            String   @id @default(uuid())
+  userId        String
+  dateFrom      DateTime
+  dateTo        DateTime
+  changedFields Json
+  reason        String
+  temporary     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dateFrom, dateTo])
+}
+
+model RoutineAnalysisCache {
+  id            String   @id @default(uuid())
+  userId        String
+  profileVersion Int
+  routineHash   String
+  engineVersion String
+  promptVersion String
+  modelVersion  String
+  content       Json
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, routineHash, engineVersion, promptVersion, modelVersion])
+  @@index([userId, createdAt])
 }

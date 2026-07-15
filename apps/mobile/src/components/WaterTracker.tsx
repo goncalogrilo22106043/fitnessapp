@@ -26,6 +26,7 @@ export function WaterTracker({
         detail="Pequenos registos contam. Nao precisa ser perfeito."
         tone="blue"
       />
+      <Text style={styles.groupLabel}>Adicionar água</Text>
       <View style={styles.row}>
         <PrimaryButton label="200ml" onPress={() => onAdd(200)} variant="outline" />
         <PrimaryButton label="300ml" onPress={() => onAdd(300)} variant="soft" />
@@ -59,6 +60,11 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 14,
     lineHeight: 20
+  },
+  groupLabel: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "800"
   },
   chart: {
     borderRadius: radius.lg

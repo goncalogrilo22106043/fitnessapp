@@ -145,13 +145,19 @@ export function MealDetailModal({
             )) : null}
           </View>
 
-          <View style={styles.actions}>
-            <PrimaryButton label="Marcar como comida" onPress={() => onMarkEaten(meal)} variant="dark" />
-            <PrimaryButton label={swapLoading ? "A procurar..." : "Trocar"} onPress={() => onSwapRequest(meal)} variant="outline" disabled={swapLoading} />
+          <View style={styles.actionGroup}>
+            <Text style={styles.groupLabel}>Ações da refeição</Text>
+            <View style={styles.actions}>
+              <PrimaryButton label="Marcar como comida" onPress={() => onMarkEaten(meal)} variant="dark" />
+              <PrimaryButton label={swapLoading ? "A procurar..." : "Trocar"} onPress={() => onSwapRequest(meal)} variant="outline" disabled={swapLoading} />
+            </View>
           </View>
-          <View style={styles.actions}>
-            <PrimaryButton label={favorite.isPending ? "..." : isFavorite ? "Remover favorita" : "Favorita"} onPress={() => favorite.mutate()} variant="soft" disabled={favorite.isPending} />
-            <PrimaryButton label={safeMeal.isPending ? "..." : isSafeMeal ? "Remover safe" : "Safe meal"} onPress={() => safeMeal.mutate()} variant="soft" disabled={safeMeal.isPending} />
+          <View style={styles.actionGroup}>
+            <Text style={styles.groupLabel}>Preferências desta refeição</Text>
+            <View style={styles.actions}>
+              <PrimaryButton label={favorite.isPending ? "..." : isFavorite ? "Remover favorita" : "Favorita"} onPress={() => favorite.mutate()} variant="soft" disabled={favorite.isPending} />
+              <PrimaryButton label={safeMeal.isPending ? "..." : isSafeMeal ? "Remover safe" : "Safe meal"} onPress={() => safeMeal.mutate()} variant="soft" disabled={safeMeal.isPending} />
+            </View>
           </View>
           {favorite.isSuccess || safeMeal.isSuccess ? (
             <InfoPanel title="Guardado" body="Atualizei as tuas preferencias para as proximas escolhas." />
@@ -163,6 +169,7 @@ export function MealDetailModal({
           {alternatives.length > 0 ? (
             <View style={styles.section}>
               <SectionTitle>Alternativas</SectionTitle>
+              <Text style={styles.bodyText}>Escolhe uma alternativa para atualizar o plano diario.</Text>
               {alternatives.map((alternative) => (
                 <Pressable key={alternative.option.meal.id} style={styles.alternative} onPress={() => onSelectAlternative(alternative)}>
                   <Text style={styles.altName}>{alternative.option.meal.name}</Text>
@@ -316,6 +323,14 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     gap: spacing.sm
+  },
+  actionGroup: {
+    gap: spacing.sm
+  },
+  groupLabel: {
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "800"
   },
   alternative: {
     backgroundColor: colors.backgroundSoft,

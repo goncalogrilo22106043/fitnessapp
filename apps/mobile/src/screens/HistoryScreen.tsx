@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ensureDemoSession } from "../features/auth/authApi";
 import { getMealHistory, getWater, getWeight, MealMoodFilter } from "../features/progress/progressApi";
-import { Badge, Card, EmptyState, LoadingSkeleton, SectionTitle } from "../ui/components";
+import { Badge, Card, EmptyState, LoadingSkeleton, SectionTitle, SelectionGroup } from "../ui/components";
 import { colors, radius, spacing, typography } from "../ui/theme";
 
 type HistoryFilter = "all" | "meals" | "water" | "weight" | "adapt";
@@ -56,13 +56,13 @@ export function HistoryScreen() {
           <Text style={styles.subtitle}>Refeicoes, agua e peso numa linha simples para perceber padroes reais.</Text>
         </View>
 
-        <View style={styles.filters}>
-          {filters.map((item) => (
-            <Pressable key={item.value} style={[styles.filter, filter === item.value && styles.filterActive]} onPress={() => setFilter(item.value)}>
-              <Text style={[styles.filterText, filter === item.value && styles.filterTextActive]}>{item.label}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <SelectionGroup
+          label="Filtrar histórico"
+          helperText="Escolhe que registos queres consultar."
+          options={filters}
+          selectedValue={filter}
+          onChange={(value) => setFilter(value as HistoryFilter)}
+        />
 
         {meals.isLoading || water.isLoading || weight.isLoading ? <LoadingSkeleton lines={4} /> : null}
 
@@ -142,11 +142,6 @@ const styles = StyleSheet.create({
   brand: { color: colors.sage, fontSize: 14, fontWeight: "800", letterSpacing: 0 },
   title: { ...typography.title, color: colors.ink },
   subtitle: { color: colors.muted, fontSize: 16, lineHeight: 23 },
-  filters: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  filter: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.pill, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  filterActive: { backgroundColor: colors.ink, borderColor: colors.ink },
-  filterText: { color: colors.ink, fontSize: 13, fontWeight: "800" },
-  filterTextActive: { color: colors.surface },
   item: { backgroundColor: colors.backgroundSoft, borderColor: colors.line, borderRadius: radius.lg, borderWidth: 1, gap: spacing.xs, padding: spacing.md },
   itemTop: { alignItems: "center", flexDirection: "row", gap: spacing.md, justifyContent: "space-between" },
   itemTitle: { color: colors.ink, fontSize: 15, fontWeight: "800", lineHeight: 20 },

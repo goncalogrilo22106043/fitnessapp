@@ -45,6 +45,12 @@ export interface DailyDashboard {
   foodVarietyIndex: number;
   consistencyScore: number;
   meals: PlanMeal[];
+  mealProgress?: {
+    totalMeals: number;
+    eatenMeals: number;
+    remainingMeals: number;
+    eatenMealIds: string[];
+  };
 }
 
 export interface MealAlternative {

@@ -36,16 +36,21 @@ export function scoreMeal(
   const breakdown: MealScoreBreakdown = {
     mealTolerance: calculateMealTolerance(meal, profile, mealFeedback),
     variety: calculateVariety(meal, recentFeedbackWindow),
-    volumeCompatibility: calculateLevelCompatibility(meal.dna.volume, profile.preferredVolumes, "medium"),
+    volumeCompatibility: applyProfileVolumeContext(
+      meal,
+      profile,
+      calculateLevelCompatibility(meal.dna.volume, profile.preferredVolumes, "medium")
+    ),
     textureCompatibility: normalizePreference(profile.preferredTextures[meal.dna.texture], 0.65),
     recentFeedback: calculateRecentFeedback(mealFeedback),
     budgetCompatibility: calculateOrderedCompatibility(meal.budget, profile.budgetPreference, orderedLevels),
     cookingTime: calculateOrderedCompatibility(meal.dna.cookingTime, profile.cookingTimePreference, orderedCookingTime)
   };
 
-  const score = Object.entries(breakdown).reduce((total, [key, value]) => {
+  const weightedScore = Object.entries(breakdown).reduce((total, [key, value]) => {
     return total + value * scoreWeights[key as keyof MealScoreBreakdown];
   }, 0);
+  const score = applyEatingModeBias(meal, profile, weightedScore);
 
   return {
     meal,
@@ -56,17 +61,47 @@ export function scoreMeal(
   };
 }
 
+function applyEatingModeBias(meal: MealOption, profile: UserNutritionProfile, score: number): number {
+  const tags = [...meal.dna.tags, ...meal.dna.dominantFlavors, meal.name].join(" ").toLowerCase();
+  const mode = profile.planMode ?? profile.eatingMode;
+
+  if (mode === "easy_bulking" && (tags.includes("wrap") || tags.includes("iogurte") || tags.includes("aveia") || meal.dna.volume === "low")) {
+    return clamp(score + 0.08);
+  }
+
+  if (mode === "clean_bulking" && (tags.includes("arroz") || tags.includes("batata") || tags.includes("ovos") || tags.includes("fruta"))) {
+    return clamp(score + 0.06);
+  }
+
+  if (mode === "balanced") {
+    return clamp(score + (meal.dna.volume === "medium" ? 0.03 : 0));
+  }
+
+  return score;
+}
+
 export function calculateMealTolerance(
   meal: MealOption,
   profile: UserNutritionProfile,
   mealFeedback: MealFeedback[]
 ): number {
-  if (profile.avoidedIngredients.some((ingredient) => meal.dna.tags.includes(ingredient))) {
+  const avoidedIngredients = [...profile.avoidedIngredients, ...(profile.dislikedFoods ?? []), ...(profile.nauseaFoods ?? [])]
+    .map((ingredient) => ingredient.toLowerCase());
+  const mealTags = [...meal.dna.tags, meal.name, ...meal.dna.dominantFlavors].map((tag) => tag.toLowerCase());
+  if (avoidedIngredients.some((ingredient) => mealTags.some((tag) => tag.includes(ingredient)))) {
     return 0.05;
+  }
+
+  if ((profile.avoidedTextures ?? []).includes(meal.dna.texture)) {
+    return 0.18;
   }
 
   if (meal.isSafeMeal || profile.safeMealIds.includes(meal.id)) {
     return mealFeedback.some((feedback) => feedback.mood === "loved") ? 0.96 : 0.9;
+  }
+
+  if ((profile.safeFoods ?? []).some((food) => mealTags.some((tag) => tag.includes(food.toLowerCase())))) {
+    return 0.82;
   }
 
   if (mealFeedback.length === 0) {
@@ -148,7 +183,27 @@ function buildRationale(meal: MealOption, breakdown: MealScoreBreakdown): string
     rationale.push("E uma Safe Meal, por isso tende a ser mais facil de manter.");
   }
 
+  if (meal.dna.texture === "creamy" || meal.dna.texture === "liquid") {
+    rationale.push("A textura tende a ser mais facil em dias de menor apetite.");
+  }
+
   return rationale.length > 0 ? rationale : ["Vamos adaptar com uma opcao equilibrada."];
+}
+
+function applyProfileVolumeContext(meal: MealOption, profile: UserNutritionProfile, base: number): number {
+  const lowAppetiteMorning = profile.appetiteMorning === "low" && meal.mealTime === "breakfast";
+  const lowVolumeTolerance = profile.volumeTolerance === "low";
+  const hardDayBias = (profile.hardEatingDays ?? []).length > 0;
+
+  if ((lowAppetiteMorning || lowVolumeTolerance || hardDayBias) && meal.dna.volume === "low") {
+    return clamp(base + 0.18);
+  }
+
+  if ((lowAppetiteMorning || lowVolumeTolerance) && meal.dna.volume === "high") {
+    return clamp(base - 0.25);
+  }
+
+  return base;
 }
 
 export function detectNauseaRisk(

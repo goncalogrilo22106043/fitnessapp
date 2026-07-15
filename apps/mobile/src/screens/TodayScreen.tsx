@@ -7,6 +7,7 @@ import { HardDayButton } from "../components/HardDayButton";
 import { MealDetailModal } from "../components/MealDetailModal";
 import { mealTimeLabel } from "../components/MealCard";
 import { NextMealCard } from "../components/NextMealCard";
+import { PersonalizedReasonCard } from "../components/PersonalizedReasonCard";
 import { TodayHero } from "../components/TodayHero";
 import { WaterTracker } from "../components/WaterTracker";
 import { ensureDemoSession } from "../features/auth/authApi";
@@ -27,6 +28,7 @@ export function TodayScreen() {
   const [feedbackMeal, setFeedbackMeal] = useState<PlanMeal | null>(null);
   const [alternatives, setAlternatives] = useState<MealAlternative[]>([]);
   const [alternativesMealKey, setAlternativesMealKey] = useState<string | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
   const createPlan = useCreatePlan();
   const feedback = useFeedback();
 
@@ -109,12 +111,17 @@ export function TodayScreen() {
     }
   });
   const dailyMeals = dashboard.data?.meals ?? [];
-  const selectedMeal = dailyMeals.find((meal) => getMealKey(meal) === selectedMealKey) ?? dailyMeals[0] ?? null;
-  const nextMeal = selectedMeal;
-  const remainingMeals = nextMeal ? dailyMeals.filter((meal) => meal.selected.meal.id !== nextMeal.selected.meal.id) : [];
+  const eatenMealIds = dashboard.data?.mealProgress?.eatenMealIds ?? [];
+  const nextUneatenMeal = dailyMeals.find((meal) => !eatenMealIds.includes(meal.selected.meal.id)) ?? dailyMeals[0] ?? null;
+  const selectedMeal = dailyMeals.find((meal) => getMealKey(meal) === selectedMealKey) ?? nextUneatenMeal;
+  const nextMeal = selectedMeal && !eatenMealIds.includes(selectedMeal.selected.meal.id) ? selectedMeal : nextUneatenMeal;
+  const remainingMeals = nextMeal
+    ? dailyMeals.filter((meal) => meal.selected.meal.id !== nextMeal.selected.meal.id && !eatenMealIds.includes(meal.selected.meal.id))
+    : dailyMeals.filter((meal) => !eatenMealIds.includes(meal.selected.meal.id));
   const hasRealPlan = dailyMeals.length > 0;
   const nextMealAlternatives = nextMeal && alternativesMealKey === getMealKey(nextMeal) ? alternatives : [];
   const detailMealAlternatives = detailMeal && alternativesMealKey === getMealKey(detailMeal) ? alternatives : [];
+  const personalizedReason = buildPersonalizedReason(profile.data, nextMeal);
 
   const statusText = useMemo(() => {
     if (feedback.isSuccess) return "Obrigado. Vamos adaptar as proximas refeicoes.";
@@ -125,20 +132,50 @@ export function TodayScreen() {
   }, [createPlan.isSuccess, feedback.isSuccess, hardDay.isSuccess, swap.isSuccess]);
 
   async function handleCreatePlan() {
-    await ensureDemoSession();
-    const plan = await createPlan.mutateAsync();
-    const todayMeal = plan.meals.find((meal) => meal.date === today) ?? plan.meals[0];
-    if (todayMeal) setSelectedMealKey(getMealKey(todayMeal));
-    await queryClient.invalidateQueries({ queryKey: ["daily-dashboard", today] });
+    setPlanError(null);
+    try {
+      await ensureDemoSession();
+      const plan = await createPlan.mutateAsync();
+      const todayMeals = plan.meals.filter((meal) => meal.date === today);
+      const todayMeal = todayMeals[0] ?? plan.meals[0];
+      if (todayMeal) setSelectedMealKey(getMealKey(todayMeal));
+      if (todayMeals.length > 0) {
+        queryClient.setQueryData(["daily-dashboard", today], {
+          caloriesConsumed: 0,
+          calorieTarget: profile.data?.targets?.calories ?? 0,
+          proteinConsumed: 0,
+          proteinTarget: profile.data?.targets?.proteinGrams ?? 0,
+          hydrationMilliliters: water.data?.consumedMilliliters ?? 0,
+          appetiteScore: 0,
+          foodVarietyIndex: 0,
+          consistencyScore: 0,
+          meals: todayMeals,
+          mealProgress: {
+            totalMeals: todayMeals.length,
+            eatenMeals: 0,
+            remainingMeals: todayMeals.length,
+            eatenMealIds: []
+          }
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: ["daily-dashboard", today] });
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : "Nao consegui gerar o plano agora.");
+    }
   }
 
-  function handleFeedback(mood: "loved" | "neutral" | "could_not_finish", eatenPercentage: number) {
+  function handleFeedback(input: {
+    mood: "loved" | "neutral" | "could_not_finish";
+    eatenPercentage: number;
+    notes?: string;
+    issueTags?: string[];
+    dislikedIngredients?: string[];
+  }) {
     if (!feedbackMeal) return;
     feedback.mutate({
       mealId: feedbackMeal.selected.meal.id,
       mealTime: feedbackMeal.mealTime,
-      mood,
-      eatenPercentage
+      ...input
     }, {
       onSuccess: () => setFeedbackMeal(null)
     });
@@ -167,6 +204,7 @@ export function TodayScreen() {
             <Text style={styles.planEmptyEyebrow}>Primeiro passo</Text>
             <Text style={styles.planEmptyTitle}>Ainda nao ha plano para hoje.</Text>
             <Text style={styles.planEmptyBody}>Vou criar as refeicoes do dia com macros, tolerancia, volume e variedade em conta.</Text>
+            {planError ? <Text style={styles.planError}>{planError}</Text> : null}
             <PrimaryButton label={createPlan.isPending ? "A gerar..." : "Gerar plano de hoje"} onPress={handleCreatePlan} disabled={createPlan.isPending} />
           </View>
         ) : hasRealPlan ? (
@@ -184,6 +222,8 @@ export function TodayScreen() {
             <Text style={styles.toastText}>{statusText}</Text>
           </View>
         ) : null}
+
+        {hasRealPlan ? <PersonalizedReasonCard reason={personalizedReason} /> : null}
 
         {nextMeal ? (
           <NextMealCard
@@ -206,7 +246,7 @@ export function TodayScreen() {
         {hasRealPlan ? <Card>
           <View style={styles.sectionHeader}>
             <SectionTitle>Refeicoes restantes</SectionTitle>
-            <Text style={styles.sectionMeta}>{remainingMeals.length} slots</Text>
+            <Text style={styles.sectionMeta}>{remainingMeals.length} por comer</Text>
           </View>
           {remainingMeals.length === 0 ? (
             <View style={styles.inlineEmpty}>
@@ -241,6 +281,33 @@ export function TodayScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function buildPersonalizedReason(
+  profile: Awaited<ReturnType<typeof getProfile>> | undefined,
+  meal: PlanMeal | null
+) {
+  const userProfile = profile?.profile;
+  const routine = profile?.routine;
+  const rationale = meal?.selected.rationale[0];
+
+  if (routine?.trainingTime) {
+    return `Hoje tens treino por volta das ${routine.trainingTime}. Mantive o plano atento a energia e proteina sem aumentar volume desnecessario.`;
+  }
+
+  if (userProfile?.appetiteMorning === "low" && meal?.mealTime === "breakfast") {
+    return "Como disseste que tens pouco apetite de manha, dei prioridade a uma opcao mais leve e toleravel.";
+  }
+
+  if (userProfile?.avoidedTextures?.includes("dry")) {
+    return "Evitei opcoes secas sempre que possivel, porque esse padrao costuma cansar mais depressa para ti.";
+  }
+
+  if (userProfile?.volumeTolerance === "low") {
+    return "Hoje mantive foco em densidade calorica e menor volume para aproximar a meta sem tornar a refeicao pesada.";
+  }
+
+  return rationale ?? "O plano foi escolhido com base em macros, tolerancia, variedade e feedback recente.";
 }
 
 function getMealKey(meal: PlanMeal): string {
@@ -289,6 +356,12 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 15,
     lineHeight: 22
+  },
+  planError: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 20
   },
   sectionHeader: {
     alignItems: "center",

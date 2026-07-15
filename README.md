@@ -52,11 +52,17 @@ DIRECT_URL=""
 JWT_SECRET=""
 PORT=4000
 NODE_ENV=development
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-4.1-mini"
 ```
 
 - `DATABASE_URL`: paste the Supabase Pooler connection string. This is the URL the app should use at runtime.
 - `DIRECT_URL`: paste the Supabase Direct connection string. Prisma uses this for migrations.
 - `JWT_SECRET`: set a long random local secret. Do not commit this file.
+- `OPENAI_API_KEY`: optional locally, required for real AI meal generation. Without it, the API returns deterministic fallback suggestions.
+- `OPENAI_MODEL`: model used by the AI meal generator.
+- `OPENAI_TIMEOUT_MS`: timeout for server-side OpenAI calls.
+- `OPENAI_MAX_RETRIES`: retry count for server-side OpenAI calls.
 
 Do not put Supabase credentials in `schema.prisma`, source code, README examples or committed files.
 
@@ -137,9 +143,9 @@ npm run db:deploy
 
 ## Current Product Surface
 
-- Onboarding saves basic data, body goal, training routine, texture/volume tolerance, food preferences, budget, eating mode and meal slots.
+- Onboarding is a 10-step guided flow that saves body data, target weight, desired pace, daily routine, training days/time, appetite windows, texture tolerance, safe foods, disliked foods, budget, plan mode and meal slots.
 - The API calculates BMR, TDEE and macros through the domain package.
-- The daily dashboard shows calories, protein, hydration, Appetite Score, Food Variety Index, Consistency Score and today's meals.
+- The daily dashboard shows calories, protein, hydration, Appetite Score, Food Variety Index, Consistency Score, today's meals and a personalized reason for the plan.
 - The "Hoje nao consigo" mode adapts remaining meals toward lower volume and Safe Meals, persists a daily adjustment and avoids duplicate activation in the same day.
 - Meal substitutions explain why each alternative was suggested.
 - Daily plans are versioned. Swaps, rollbacks and hard-day mode create adjustment logs without losing the original plan.
@@ -148,17 +154,84 @@ npm run db:deploy
 - Meal history and weekly insights expose tolerance, variety, consistency, hydration and weight context.
 - Favorite meals and Safe Meals are persisted per user profile and reflected in the daily dashboard.
 - Meal detail exposes ingredients, recipe steps, Meal DNA, score and recent feedback.
+- Mobile starts with real login/register before onboarding, so profile, targets, meals, feedback, water, weight and preferences are scoped to the logged-in account.
+- Meal feedback captures mood, percentage eaten, issue tags, ingredient notes and free notes; the API stores these signals and updates future avoidance/preference context.
+- The "Comer" tab lists real MealOptions, filters by slot/texture/volume/favorite/safe/paused and persists favorite/Safe Meal changes.
+- The "Comer" tab now also stores what the user has at home and can ask AI for meal ideas based on pantry, profile, targets and notes.
+- The "Progresso" tab combines weekly insights, hydration, weight trend and meal feedback signals.
 - The mobile UI uses a premium card-based design system with badges, progress bars, skeletons, toasts and clear empty states.
-- Profile screen shows targets, water goal, eating mode, volume/texture preferences, budget and recalculation actions.
+- Profile screen shows targets, water goal, eating mode, volume/texture preferences, budget, recalculation actions and a visual "Meal Genome" pattern.
 - Charts use `react-native-chart-kit@6.12.0` with `react-native-svg` for Expo SDK 54 / React 19 compatibility.
 
-## GitHub and Railway
+## GitHub and Vercel
 
-Recommended first deployment:
+Recommended API deployment:
 
 1. Push this repository to GitHub.
-2. Deploy the API on Railway as a traditional Node/Express service.
+2. Deploy the API on Vercel from the repository root.
 3. Use Expo Go locally for mobile testing.
+
+Vercel setup:
+
+1. Create or import a Vercel project from the GitHub repository.
+2. Set Root Directory to the repository root. Do not set it to `apps/api`.
+3. Keep Framework Preset as Other.
+4. Vercel uses `server.ts` at the repository root as the Node/Express entrypoint.
+5. Build Command:
+
+```bash
+npm run vercel:build
+```
+
+6. Install Command:
+
+```bash
+npm install
+```
+
+7. Output Directory: leave empty.
+8. Add these environment variables in Vercel, never in Git:
+
+```bash
+DATABASE_URL="Supabase Pooler URL"
+DIRECT_URL="Supabase Direct connection URL or Session Pooler URL"
+JWT_SECRET="long random secret"
+NODE_ENV=production
+OPENAI_API_KEY="OpenAI API key"
+OPENAI_MODEL="gpt-4.1-mini"
+OPENAI_TIMEOUT_MS=20000
+OPENAI_MAX_RETRIES=1
+```
+
+Vercel health check URL:
+
+```bash
+https://your-vercel-domain.vercel.app/health
+```
+
+Expected health response:
+
+```json
+{ "status": "ok", "product": "rotina" }
+```
+
+Run migrations manually before or after deployment when schema changes:
+
+```bash
+npm run db:deploy
+```
+
+Run seed manually only when needed:
+
+```bash
+npm run db:seed
+```
+
+The API is deployed as a Vercel Node.js server entrypoint. Vercel detects the root `server.ts`, captures `app.listen()`, and routes requests to the Express app. This avoids using `apps/api` as an isolated root, so the monorepo workspace `@rotina/domain` is available during install/build.
+
+## Railway Legacy
+
+Railway is no longer the recommended deployment target for this project, but the old config remains as a fallback.
 
 Railway setup:
 
@@ -190,6 +263,8 @@ DATABASE_URL="Supabase Pooler URL"
 DIRECT_URL="Supabase Direct connection URL"
 JWT_SECRET="long random secret"
 NODE_ENV=production
+OPENAI_API_KEY="OpenAI API key"
+OPENAI_MODEL="gpt-4.1-mini"
 ```
 
 For Supabase, do not use the same direct `db.<project>.supabase.co:5432` URL for both variables in Railway. Use the Supabase pooler connection string for `DATABASE_URL`. Use the direct connection string for `DIRECT_URL` only if the Railway service can reach it; otherwise use the Supabase session pooler for migrations.
@@ -218,13 +293,13 @@ Run production migrations as a Railway one-off command after the database URL is
 npm run railway:migrate
 ```
 
-The API is a normal Express server. Production starts the compiled server at `apps/api/dist/apps/api/src/server.js`; it does not use Vercel serverless files.
+The Railway API starts the compiled server at `apps/api/dist/apps/api/src/server.js`.
 
 ## Supabase
 
 In Supabase, copy the Shared Pooler URI for `DATABASE_URL`. Use a reachable Direct connection or Session Pooler URI for `DIRECT_URL`.
 
-If your database password has special characters, percent-encode them before pasting the URL into Railway or `apps/api/.env`.
+If your database password has special characters, percent-encode them before pasting the URL into Vercel, Railway or `apps/api/.env`.
 
 Required API variables:
 
@@ -234,6 +309,8 @@ DIRECT_URL=""
 JWT_SECRET=""
 PORT=4000
 NODE_ENV=development
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-4.1-mini"
 ```
 
 ## Technical Decisions
@@ -241,18 +318,23 @@ NODE_ENV=development
 - The Adaptive Nutrition Engine lives in `packages/domain` and has no dependency on React Native, Express, Prisma or storage.
 - The API persists and validates data, but delegates scoring, nutrition calculations and adaptation decisions to the domain.
 - The mobile app keeps UI state only; meal selection, hard-day adaptation and substitution explanations come from the API/domain.
+- AI meal ideas, feedback learning and routine analysis are generated server-side in the API, never directly from the mobile app. The API sends minimized routine/profile context only after consent and stores validated outputs/signals.
 - PostgreSQL is provided by `docker-compose.yml` for local development.
 - Railway runs the API as a traditional Node process with `app.listen()` and `process.env.PORT`.
 - Tests use Node's built-in test runner with `tsx` loading TypeScript.
 - Plans store `engineVersion` and `scoringWeightsVersion` so future scoring changes do not invalidate historical plans.
 - Daily versioning uses immutable `DailyPlanVersion` rows plus `DailyPlanAdjustment` audit logs.
 - Profile water target starts from `35ml * body weight` and can be adjusted later.
+- Deep personalization fields live on `UserProfile` and `TrainingRoutine`; the mobile app collects them, the API validates them with Zod, and the domain engine uses them for scoring/adaptation.
 
 ## Current Limitations
 
-- Authentication is still a simple JWT email/password flow with a demo session in the mobile app.
+- Authentication is still a simple JWT email/password flow. The mobile app does not yet persist the token securely after a full app restart.
 - Supabase Storage is scaffolded but not wired to real credentials yet.
-- Profile editing is intentionally minimal; it should become a richer form before beta.
+- Profile editing is still mostly read-only apart from water target and recalculation; the deep onboarding fields should become editable before beta.
+- The "Adicionar refeicao" API exists, but the mobile form is intentionally deferred to avoid creating incomplete meal data.
+- Weekly plan generation is still primarily the deterministic domain engine; AI currently powers "what can I eat now?" pantry-based ideas and is ready to expand into full weekly AI planning.
+- Feedback learning updates avoided ingredients and issue tags, but the next full step is AI-assisted weekly plan generation using the complete feedback history.
 - Charts are simple first-pass visualizations, not a full analytics experience yet.
 - Weekly insights are first-pass aggregate rules; they are not yet personalized by training phase.
 - The algorithm is versioned, but there is not yet an experiment assignment system for A/B tests.
@@ -271,6 +353,10 @@ NODE_ENV=development
 - `GET /meals/:mealId`: fetch meal detail, ingredients, recipe, DNA and recent feedback.
 - `PATCH /meals/:mealId/favorite`: mark or unmark a meal as favorite.
 - `PATCH /meals/:mealId/safe`: mark or unmark a meal as Safe Meal.
+- `GET /pantry` and `PUT /pantry`: read and update foods the user has at home.
+- `POST /ai/meal-ideas`: generate AI meal ideas from pantry, profile, targets and user notes.
+- `POST /ai/routine-analysis`: generate or reuse a structured routine analysis with consent, cache and deterministic fallback.
+- `POST /feedback`: save meal feedback, analyze notes/ingredients and update profile learning signals.
 - `POST /progress/water` and `GET /progress/water`: water logs and daily hydration summary.
 - `POST /progress/weight` and `GET /progress/weight`: weight logs and trend.
 - `GET /progress/meal-history`: meal feedback history with filters.

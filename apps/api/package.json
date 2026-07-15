@@ -12,7 +12,7 @@
     "prisma:generate": "node scripts/prisma-generate.mjs",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "npm run build -w @rotina/domain && tsx prisma/seed.ts"
+    "prisma:seed": "npm run build -w @rotina/domain && tsc -p tsconfig.seed.json && node dist-seed/apps/api/prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.17.0",

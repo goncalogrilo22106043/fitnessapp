@@ -5,9 +5,30 @@ export interface ProfileResponse {
   profile: {
     preferredTextures: Record<string, number>;
     preferredVolumes: Record<string, number>;
+    preferredFlavors: Record<string, number>;
     avoidedIngredients: string[];
+    wakeTime?: string | null;
+    sleepTime?: string | null;
+    workType?: string | null;
+    hardEatingDays: string[];
+    targetWeightKilograms?: number | null;
+    desiredPace: string;
+    appetiteMorning?: string | null;
+    appetiteNight?: string | null;
+    bestAppetiteTime?: string | null;
+    worstAppetiteTime?: string | null;
+    volumeTolerance?: string | null;
+    avoidedTextures: string[];
+    preferredTextureStyle?: string | null;
+    nauseaFoods: string[];
+    safeFoods: string[];
+    favoriteFoods: string[];
+    dislikedFoods: string[];
+    allergies: string[];
+    dietType: string;
     budgetPreference: string;
-    eatingMode: "clean_bulking" | "easy_bulking";
+    eatingMode: "clean_bulking" | "easy_bulking" | "balanced";
+    planMode: string;
     bodyGoal: string;
     dailyWaterTargetMl: number;
   } | null;
@@ -19,7 +40,15 @@ export interface ProfileResponse {
     carbsGrams: number;
     fatGrams: number;
   } | null;
-  routine: { trainingDaysPerWeek: number; trainingType: string } | null;
+  routine: {
+    trainingDaysPerWeek: number;
+    trainingType: string;
+    preferredTimes: string[];
+    trainingDays: string[];
+    trainingTime?: string | null;
+    trainingIntensity: string;
+    restDays: string[];
+  } | null;
   budget: { level: string; maxCookingMinutes: number } | null;
   mealSlots: Array<{ mealTime: string; targetCalories: number; targetProtein: number }>;
 }
